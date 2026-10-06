@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { signIn } from '@/lib/auth';
 
 const registerSchema = z.object({
   email: z.string().email('?????? ?????????? ??? ????'),
