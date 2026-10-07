@@ -24,3 +24,10 @@ Secrets belong in deployment secret storage/environment configuration. Never com
 
 ## Incident principle
 Deny by default. Fail closed on missing authentication, organization context, or authorization.
+
+## Current foundation decisions
+- Public registration is disabled; users are created by an organization SUPER_ADMIN so every account receives an organization membership.
+- Authentication success/failure and organization role changes are written to AuditLog through a best-effort audit service.
+- Organization ownership is enforced both in application queries and, for cross-entity relations, with PostgreSQL composite foreign keys using `(resourceId, organizationId)`.
+- Optional cross-entity references use restrictive delete behavior where PostgreSQL cannot null only the resource ID without also nulling the mandatory organization ID.
+- Login rate limiting, password reset/MFA, file scanning/storage controls, and finalized CSP remain explicit security gates before production security sign-off.
