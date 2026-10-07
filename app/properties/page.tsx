@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { requireOrganizationContext } from "@/lib/authorization/organization";
 
 const typeLabels: Record<string, string> = {
   RESIDENTIAL: "سكني",
@@ -13,9 +14,10 @@ const typeLabels: Record<string, string> = {
 export default async function PropertiesPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const context = await requireOrganizationContext();
 
   const properties = await prisma.property.findMany({
-    where: session.user.role === "PROPERTY_MANAGER" ? { managerId: session.user.id } : undefined,
+    where: session.user.role === "PROPERTY_MANAGER" ? { organizationId: context.organizationId, managerId: session.user.id } : { organizationId: context.organizationId },
     include: { _count: { select: { units: true } } },
     orderBy: { createdAt: "desc" },
   });
