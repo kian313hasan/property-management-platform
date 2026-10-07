@@ -12,48 +12,36 @@ const registerSchema = z.object({
 });
 
 export async function register(formData: FormData, options?: { requireSuperAdmin?: boolean }) {
-  if (options?.requireSuperAdmin) {
-    const session = await (await import('@/lib/auth')).auth();
-    if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') return { error: 'ليس لديك صلاحية إنشاء المستخدمين.' };
+  if (!options?.requireSuperAdmin) {
+    return { error: "التسجيل العام غير متاح. يجب أن تتم إضافة المستخدم من قبل مسؤول المؤسسة." };
   }
-  try {
-    const validatedFields = registerSchema.safeParse({
-      email: formData.get('email'),
-      password: formData.get('password'),
-      name: formData.get('name'),
-    });
 
-    if (!validatedFields.success) {
-      return { error: '?????? ??? ?????' };
-    }
-
-    const { email, password, name } = validatedFields.data;
-
-    // ?????? ?? ??? ???? ?????? ?????????? ??????
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return { error: '??? ??? ????? ???????' }; // ????? ???? ????? ????
-    }
-
-    // ????? ???? ??????
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // ????? ????????
-    await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: hashedPassword,
-      },
-    });
-
-    return { success: '?? ??????? ?????' };
-  } catch (error) {
-    return { error: '??? ??? ????? ???????' };
+  const { requireOrganizationContext } = await import("@/lib/authorization/organization");
+  const context = await requireOrganizationContext();
+  if (context.role !== "SUPER_ADMIN") {
+    return { error: "ليس لديك صلاحية إنشاء المستخدمين." };
   }
+
+  const validatedFields = registerSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+    name: formData.get("name"),
+  });
+
+  if (!validatedFields.success) return { error: "تحقق من البيانات." };
+
+  const { email, password, name } = validatedFields.data;
+  const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (existingUser) return { error: "هذا البريد الإلكتروني مستخدم بالفعل." };
+
+  const hashedPassword = await bcrypt.hash(password, 12);
+  const user = await prisma.user.create({ data: { email, name, password: hashedPassword } });
+
+  await prisma.organizationMember.create({
+    data: { organizationId: context.organizationId, userId: user.id, role: "STAFF" },
+  });
+
+  return { success: "تم إنشاء المستخدم بنجاح." };
 }
 
 const loginSchema = z.object({
