@@ -5,7 +5,12 @@ const enabled = process.env.INTEGRATION_TESTS === "1" && Boolean(process.env.DAT
 describe.skipIf(!enabled)("tenant isolation integration", () => {
   it("rejects a cross-organization child/parent relation at the database boundary", async () => {
     const { PrismaClient } = await import("@prisma/client");
-    const prisma = new PrismaClient();
+    const { PrismaPg } = await import("@prisma/adapter-pg");
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) throw new Error("DATABASE_URL is required for integration tests");
+    const prisma = new PrismaClient({
+      adapter: new PrismaPg({ connectionString }),
+    });
 
     const suffix = Date.now().toString();
     try {
