@@ -42,7 +42,8 @@ describe.skipIf(!enabled)("tenant isolation integration", () => {
 
       await prisma.organization.deleteMany({ where: { id: { in: [orgA.id, orgB.id] } } });
     } finally {
-      await prisma.$disconnect();
+      await prisma.loginRateLimit.deleteMany({ where: { key: { contains: "login:" } } });
+    await prisma.$disconnect();
     }
   });
 });
