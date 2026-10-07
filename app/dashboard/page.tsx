@@ -23,8 +23,8 @@ export default async function DashboardPage() {
     prisma.payment.aggregate({ _sum: { amount: true }, where: paymentWhere }),
     prisma.expense.aggregate({ _sum: { amount: true }, where: expenseWhere }),
   ]);
-  const totalRevenue = revenue._sum.amount ?? 0;
-  const totalExpenses = expenses._sum.amount ?? 0;
+  const totalRevenue = revenue._sum.amount?.toNumber() ?? 0;
+  const totalExpenses = expenses._sum.amount?.toNumber() ?? 0;
   const netIncome = totalRevenue - totalExpenses;
   const stats = (isManager || session.user.role === "SUPER_ADMIN") ? [["العقارات", propertyCount], ["المستأجرون", tenantCount], ["العقود النشطة", activeLeaseCount], ["الدفعات المدفوعة", paidPaymentCount]] : canFinance ? [["الدفعات المدفوعة", paidPaymentCount]] : [];
   return <main className="min-h-screen bg-slate-50" dir="rtl">
