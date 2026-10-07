@@ -42,7 +42,7 @@ describe.skipIf(!enabled)("tenant isolation integration", () => {
 
       await prisma.organization.deleteMany({ where: { id: { in: [orgA.id, orgB.id] } } });
     } finally {
-        await prisma.loginRateLimit.deleteMany({ where: { key: { contains: "login:" } } });
+        await prisma.loginRateLimit.deleteMany();
       await prisma.$disconnect();
     }
   });
@@ -50,7 +50,9 @@ describe.skipIf(!enabled)("tenant isolation integration", () => {
   it("enforces the persistent login rate limit and clears it after success", async () => {
     const { checkLoginRateLimit, clearLoginRateLimit } = await import("@/lib/security/login-rate-limit");
     const email = `rate-limit-${Date.now()}@example.test`;
-    const ip = "192.0.2.10";
+    const ip = undefined;
+
+    await clearLoginRateLimit(email, ip);
 
     for (let attempt = 1; attempt <= 5; attempt += 1) {
       expect(await checkLoginRateLimit(email, ip)).toBe(false);
