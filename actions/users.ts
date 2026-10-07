@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { requireOrganizationContext } from "@/lib/authorization/organization";
+import { randomUUID } from "node:crypto";
+import { recordAuditEvent } from "@/lib/audit/service";
 
 const roles = ["SUPER_ADMIN", "PROPERTY_MANAGER", "ACCOUNTANT", "MAINTENANCE_MANAGER", "STAFF", "TENANT"] as const;
 const schema = z.object({ role: z.enum(roles) });
@@ -52,6 +54,7 @@ export async function updateUserRole(formData: FormData) {
   });
   if (!membership) return { error: "المستخدم غير موجود في المؤسسة الحالية." };
 
+  const previous = await prisma.organizationMember.findUnique({ where: { id: membership.id }, select: { role: true } });
   await prisma.organizationMember.update({
     where: { id: membership.id },
     data: { role: parsed.data.role },
@@ -60,6 +63,15 @@ export async function updateUserRole(formData: FormData) {
   // Transitional compatibility: the JWT currently carries User.role.
   // OrganizationMember.role is the authorization source of truth.
   await prisma.user.update({ where: { id: userId }, data: { role: parsed.data.role } });
+  await recordAuditEvent({
+    action: "ROLE_CHANGED",
+    actorUserId: context.userId,
+    organizationId: context.organizationId,
+    resourceType: "OrganizationMember",
+    resourceId: membership.id,
+    requestId: randomUUID(),
+    metadata: { previousRole: previous?.role ?? null, newRole: parsed.data.role },
+  });
 
   revalidatePath("/admin/users");
   revalidatePath("/dashboard");
