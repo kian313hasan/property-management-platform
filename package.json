@@ -10,8 +10,8 @@
     "postinstall": "prisma skills sync || exit 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "testWatch": "vitest",
-    "testE2E": "playwright test"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
