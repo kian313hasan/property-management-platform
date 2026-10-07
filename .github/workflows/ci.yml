@@ -43,7 +43,7 @@ jobs:
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
       - name: Build Docker image
-        run: docker build --tag property-management-platform:ci .
+        run: docker build --secret id=database_url,env=DATABASE_URL --secret id=auth_secret,env=AUTH_SECRET --tag property-management-platform:ci .
 
   e2e:
     runs-on: ubuntu-latest
