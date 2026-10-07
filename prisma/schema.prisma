@@ -118,7 +118,7 @@ model Unit {
   area        Float?
   rentAmount  Float
   status      UnitStatus @default(AVAILABLE)
-  property    Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property    Property   @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
   leases      Lease[]
   expenses    Expense[]
   maintenanceRequests MaintenanceRequest[]
@@ -163,8 +163,8 @@ model Lease {
   paymentDueDay Int         @default(1)
   status        LeaseStatus @default(DRAFT)
   notes         String?
-  unit          Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit          Unit        @relation(fields: [unitId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  tenant        Tenant      @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: Cascade)
   payments      Payment[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -188,7 +188,7 @@ model Payment {
   method      String?
   reference   String?
   notes       String?
-  lease       Lease         @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  lease       Lease         @relation(fields: [leaseId, organizationId], references: [id, organizationId], onDelete: Cascade)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -210,13 +210,11 @@ model Expense {
   date       DateTime
   vendor     String?
   notes      String?
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  unit       Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  property   Property @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  unit       Unit?    @relation(fields: [unitId, organizationId], references: [id, organizationId], onDelete: SetNull)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@index([organizationId])
-  @@unique([id, organizationId])
   @@index([organizationId])
   @@unique([id, organizationId])
   @@index([propertyId])
@@ -239,9 +237,9 @@ model MaintenanceRequest {
   cost        Float?
   openedAt    DateTime @default(now())
   resolvedAt  DateTime?
-  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  unit        Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  property    Property @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  unit        Unit?    @relation(fields: [unitId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  tenant      Tenant?  @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: SetNull)
   assignedTo  User?    @relation("AssignedMaintenance", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -249,6 +247,7 @@ model MaintenanceRequest {
   @@index([propertyId])
   @@index([unitId])
   @@index([tenantId])
+  @@index([organizationId])
   @@index([assignedToId])
   @@index([status])
 }
