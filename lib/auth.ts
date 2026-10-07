@@ -59,4 +59,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   secret: env.AUTH_SECRET,
+  events: {
+    async signOut({ token }) {
+      const requestId = randomUUID();
+      const actorUserId = typeof token?.id === "string" ? token.id : null;
+      await recordAuditEvent({
+        action: "LOGOUT",
+        actorUserId,
+        organizationId: null,
+        resourceType: "AUTH",
+        resourceId: actorUserId,
+        requestId,
+      });
+    },
+  },
 });
