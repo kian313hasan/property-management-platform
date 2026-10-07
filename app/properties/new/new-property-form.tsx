@@ -6,7 +6,7 @@ import { createProperty } from "@/actions/properties";
 const initialState = { error: "" };
 
 export default function NewPropertyForm() {
-  const [state, formAction, pending] = useActionState(createProperty, initialState);
+  const [state, formAction, pending] = useActionState(async (_prev, formData) => createProperty(formData), initialState);
 
   return (
     <form action={formAction} className="mt-7 space-y-5">
