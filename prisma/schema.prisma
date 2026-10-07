@@ -211,7 +211,7 @@ model Expense {
   vendor     String?
   notes      String?
   property   Property @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
-  unit       Unit?    @relation(fields: [unitId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  unit       Unit?    @relation(fields: [unitId, organizationId], references: [id, organizationId], onDelete: Restrict)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -238,8 +238,8 @@ model MaintenanceRequest {
   openedAt    DateTime @default(now())
   resolvedAt  DateTime?
   property    Property @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
-  unit        Unit?    @relation(fields: [unitId, organizationId], references: [id, organizationId], onDelete: SetNull)
-  tenant      Tenant?  @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  unit        Unit?    @relation(fields: [unitId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tenant      Tenant?  @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: Restrict)
   assignedTo  User?    @relation("AssignedMaintenance", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
