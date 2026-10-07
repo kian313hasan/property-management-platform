@@ -34,3 +34,10 @@ Decision: start with a small typed locale configuration and translation resource
 Alternatives: next-intl immediately.
 Reason: avoid premature dependency complexity during foundation.
 Consequences: locale routing and message formatting must remain centralized and tested.
+
+## ADR-006: Shared-schema organization ownership
+Context: the initial business tables were not tenant-scoped, which would permit cross-organization reads/writes once multiple organizations exist.
+Decision: add a mandatory organizationId to Property, Unit, Tenant, Lease, Payment, Expense, and MaintenanceRequest, with PostgreSQL foreign keys to Organization and organization-scoped server-side queries.
+Migration strategy: existing single-tenant records are assigned to a deterministic default organization during the migration, and existing users receive membership in that organization.
+Reason: preserves existing data while establishing an explicit tenant boundary without introducing database-per-tenant operational complexity.
+Consequences: all future data access must derive organization context from authenticated membership; client-supplied organization IDs are not trusted. Cross-tenant integration tests remain a required gate.
