@@ -15,6 +15,39 @@ enum Role {
   TENANT
 }
 
+enum PropertyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  MIXED
+  OTHER
+}
+
+enum UnitStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum LeaseStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -27,6 +60,151 @@ model User {
   sessions      Session[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  managedProperties Property[] @relation("PropertyManager")
+  maintenanceRequests MaintenanceRequest[] @relation("AssignedMaintenance")
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  country     String
+  type        PropertyType   @default(RESIDENTIAL)
+  status      PropertyStatus @default(ACTIVE)
+  managerId   String?
+  manager     User?          @relation("PropertyManager", fields: [managerId], references: [id], onDelete: SetNull)
+  units       Unit[]
+  expenses    Expense[]
+  maintenanceRequests MaintenanceRequest[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([managerId])
+  @@index([status])
+}
+
+model Unit {
+  id          String     @id @default(cuid())
+  propertyId  String
+  unitNumber  String
+  floor       Int?
+  bedrooms    Int?
+  bathrooms   Float?
+  area        Float?
+  rentAmount  Float
+  status      UnitStatus @default(AVAILABLE)
+  property    Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  leases      Lease[]
+  expenses    Expense[]
+  maintenanceRequests MaintenanceRequest[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([propertyId, unitNumber])
+  @@index([status])
+}
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  nationalId  String?
+  address     String?
+  leases      Lease[]
+  maintenanceRequests MaintenanceRequest[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([email])
+}
+
+model Lease {
+  id            String      @id @default(cuid())
+  unitId        String
+  tenantId      String
+  startDate     DateTime
+  endDate       DateTime
+  rentAmount    Float
+  depositAmount Float?
+  paymentDueDay Int         @default(1)
+  status        LeaseStatus @default(DRAFT)
+  notes         String?
+  unit          Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  leaseId     String
+  amount      Float
+  dueDate     DateTime
+  paidDate    DateTime?
+  status      PaymentStatus @default(PENDING)
+  method      String?
+  reference   String?
+  notes       String?
+  lease       Lease         @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([leaseId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model Expense {
+  id         String   @id @default(cuid())
+  propertyId String
+  unitId     String?
+  category   String
+  amount     Float
+  date       DateTime
+  vendor     String?
+  notes      String?
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit       Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([unitId])
+  @@index([date])
+}
+
+model MaintenanceRequest {
+  id          String   @id @default(cuid())
+  propertyId  String
+  unitId      String?
+  tenantId    String?
+  assignedToId String?
+  title       String
+  description String?
+  priority    String   @default("MEDIUM")
+  status      String   @default("OPEN")
+  cost        Float?
+  openedAt    DateTime @default(now())
+  resolvedAt  DateTime?
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit        Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  assignedTo  User?    @relation("AssignedMaintenance", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([assignedToId])
+  @@index([status])
 }
 
 model Account {
