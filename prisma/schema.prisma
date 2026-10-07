@@ -84,6 +84,8 @@ model User {
 
 model Property {
   id          String         @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name        String
   address     String
   city        String
@@ -98,12 +100,16 @@ model Property {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
+  @@index([organizationId])
+  @@unique([id, organizationId])
   @@index([managerId])
   @@index([status])
 }
 
 model Unit {
   id          String     @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   propertyId  String
   unitNumber  String
   floor       Int?
@@ -120,11 +126,15 @@ model Unit {
   updatedAt   DateTime   @updatedAt
 
   @@unique([propertyId, unitNumber])
+  @@unique([id, organizationId])
+  @@index([organizationId])
   @@index([status])
 }
 
 model Tenant {
   id          String   @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name        String
   email       String?
   phone       String?
@@ -135,11 +145,15 @@ model Tenant {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([organizationId])
+  @@unique([id, organizationId])
   @@index([email])
 }
 
 model Lease {
   id            String      @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   unitId        String
   tenantId      String
   startDate     DateTime
@@ -155,6 +169,8 @@ model Lease {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
+  @@index([organizationId])
+  @@unique([id, organizationId])
   @@index([unitId])
   @@index([tenantId])
   @@index([status])
@@ -162,6 +178,8 @@ model Lease {
 
 model Payment {
   id          String        @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   leaseId     String
   amount      Float
   dueDate     DateTime
@@ -174,6 +192,8 @@ model Payment {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  @@index([organizationId])
+  @@unique([id, organizationId])
   @@index([leaseId])
   @@index([status])
   @@index([dueDate])
@@ -181,6 +201,8 @@ model Payment {
 
 model Expense {
   id         String   @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   propertyId String
   unitId     String?
   category   String
@@ -193,6 +215,10 @@ model Expense {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([organizationId])
+  @@unique([id, organizationId])
+  @@index([organizationId])
+  @@unique([id, organizationId])
   @@index([propertyId])
   @@index([unitId])
   @@index([date])
@@ -200,6 +226,8 @@ model Expense {
 
 model MaintenanceRequest {
   id          String   @id @default(cuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   propertyId  String
   unitId      String?
   tenantId    String?
@@ -268,6 +296,13 @@ model Organization {
   updatedAt DateTime @updatedAt
   members   OrganizationMember[]
   auditLogs AuditLog[]
+  properties Property[]
+  units Unit[]
+  tenants Tenant[]
+  leases Lease[]
+  payments Payment[]
+  expenses Expense[]
+  maintenanceRequests MaintenanceRequest[]
 }
 
 model OrganizationMember {
