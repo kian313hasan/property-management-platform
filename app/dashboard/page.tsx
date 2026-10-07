@@ -2,17 +2,19 @@ import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { requireOrganizationContext } from "@/lib/authorization/organization";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
+  const context = await requireOrganizationContext();
   const isManager = session.user.role === "PROPERTY_MANAGER";
   const canFinance = ["SUPER_ADMIN","PROPERTY_MANAGER","ACCOUNTANT"].includes(session.user.role);
   const canMaintenance = ["SUPER_ADMIN","PROPERTY_MANAGER","MAINTENANCE_MANAGER","STAFF"].includes(session.user.role);
-  const propertyWhere = isManager ? { managerId: session.user.id } : undefined;
-  const paymentWhere = isManager ? { status: "PAID" as const, lease: { unit: { property: { managerId: session.user.id } } } } : { status: "PAID" as const };
-  const expenseWhere = isManager ? { property: { managerId: session.user.id } } : undefined;
-  const leaseWhere = isManager ? { status: "ACTIVE" as const, unit: { property: { managerId: session.user.id } } } : { status: "ACTIVE" as const };
+  const propertyWhere = isManager ? { organizationId: context.organizationId, managerId: session.user.id } : { organizationId: context.organizationId };
+  const paymentWhere = isManager ? { organizationId: context.organizationId, status: "PAID" as const, lease: { unit: { property: { managerId: session.user.id } } } } : { organizationId: context.organizationId, status: "PAID" as const };
+  const expenseWhere = isManager ? { organizationId: context.organizationId, property: { managerId: session.user.id } } : { organizationId: context.organizationId };
+  const leaseWhere = isManager ? { organizationId: context.organizationId, status: "ACTIVE" as const, unit: { property: { managerId: session.user.id } } } : { organizationId: context.organizationId, status: "ACTIVE" as const };
   const [propertyCount, tenantCount, activeLeaseCount, paidPaymentCount, revenue, expenses] = await Promise.all([
     prisma.property.count({ where: propertyWhere }),
     prisma.tenant.count(),
