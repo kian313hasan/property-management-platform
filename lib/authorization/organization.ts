@@ -1,6 +1,9 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors/app-error";
+import { cookies } from "next/headers";
+
+export const ACTIVE_ORGANIZATION_COOKIE = "active_organization_id";
 
 export async function requireOrganizationContext() {
   const session = await auth();
@@ -14,13 +17,7 @@ export async function requireOrganizationContext() {
     select: {
       organizationId: true,
       role: true,
-      organization: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
-      },
+      organization: { select: { id: true, name: true, slug: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -29,14 +26,11 @@ export async function requireOrganizationContext() {
     throw new AppError("FORBIDDEN", "The user is not a member of an organization.");
   }
 
-  if (memberships.length > 1) {
-    throw new AppError(
-      "CONFLICT",
-      "Multiple organization memberships require an explicit active organization."
-    );
-  }
-
-  const membership = memberships[0];
+  const cookieStore = await cookies();
+  const requestedOrganizationId = cookieStore.get(ACTIVE_ORGANIZATION_COOKIE)?.value;
+  const membership =
+    memberships.find((item) => item.organizationId === requestedOrganizationId) ??
+    memberships[0];
 
   if (!membership) {
     throw new AppError("INTERNAL_ERROR", "Organization context could not be resolved.");
@@ -47,5 +41,10 @@ export async function requireOrganizationContext() {
     organizationId: membership.organizationId,
     role: membership.role,
     organization: membership.organization,
+    memberships: memberships.map((item) => ({
+      organizationId: item.organizationId,
+      role: item.role,
+      organization: item.organization,
+    })),
   };
 }
