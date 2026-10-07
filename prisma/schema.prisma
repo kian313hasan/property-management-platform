@@ -116,7 +116,7 @@ model Unit {
   bedrooms    Int?
   bathrooms   Float?
   area        Float?
-  rentAmount  Float
+  rentAmount     Decimal
   status      UnitStatus @default(AVAILABLE)
   property    Property   @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
   leases      Lease[]
@@ -158,8 +158,8 @@ model Lease {
   tenantId      String
   startDate     DateTime
   endDate       DateTime
-  rentAmount    Float
-  depositAmount Float?
+  rentAmount     Decimal
+  depositAmount Decimal?
   paymentDueDay Int         @default(1)
   status        LeaseStatus @default(DRAFT)
   notes         String?
@@ -181,7 +181,7 @@ model Payment {
   organizationId String
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   leaseId     String
-  amount      Float
+  amount      Decimal
   dueDate     DateTime
   paidDate    DateTime?
   status      PaymentStatus @default(PENDING)
@@ -206,7 +206,7 @@ model Expense {
   propertyId String
   unitId     String?
   category   String
-  amount     Float
+  amount      Decimal
   date       DateTime
   vendor     String?
   notes      String?
@@ -234,7 +234,7 @@ model MaintenanceRequest {
   description String?
   priority    String   @default("MEDIUM")
   status      String   @default("OPEN")
-  cost        Float?
+  cost        Decimal?
   openedAt    DateTime @default(now())
   resolvedAt  DateTime?
   property    Property @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
