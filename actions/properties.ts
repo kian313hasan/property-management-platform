@@ -3,8 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationContext } from "@/lib/authorization/organization";
 
 const propertySchema = z.object({
   name: z.string().trim().min(2, "اسم العقار مطلوب"),
@@ -17,11 +17,8 @@ const propertySchema = z.object({
 const canManageProperties = new Set(["SUPER_ADMIN", "PROPERTY_MANAGER"]);
 
 export async function createProperty(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "يجب تسجيل الدخول أولاً." };
-  if (!canManageProperties.has(session.user.role)) {
-    return { error: "ليس لديك صلاحية إضافة عقار." };
-  }
+  const context = await requireOrganizationContext();
+  if (!canManageProperties.has(context.role)) return { error: "ليس لديك صلاحية إضافة عقار." };
 
   const parsed = propertySchema.safeParse({
     name: formData.get("name"),
@@ -36,7 +33,8 @@ export async function createProperty(formData: FormData) {
   await prisma.property.create({
     data: {
       ...parsed.data,
-      managerId: session.user.role === "PROPERTY_MANAGER" ? session.user.id : null,
+      organizationId: context.organizationId,
+      managerId: context.role === "PROPERTY_MANAGER" ? context.userId : null,
     },
   });
 
