@@ -11,7 +11,11 @@ const registerSchema = z.object({
   name: z.string().min(2, '????? ??? ?? ???? ????? ??? ?????'),
 });
 
-export async function register(formData: FormData) {
+export async function register(formData: FormData, options?: { requireSuperAdmin?: boolean }) {
+  if (options?.requireSuperAdmin) {
+    const session = await (await import('@/lib/auth')).auth();
+    if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') return { error: 'ليس لديك صلاحية إنشاء المستخدمين.' };
+  }
   try {
     const validatedFields = registerSchema.safeParse({
       email: formData.get('email'),
