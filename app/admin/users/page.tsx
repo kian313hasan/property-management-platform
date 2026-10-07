@@ -50,7 +50,7 @@ export default async function AdminUsersPage() {
                   <td className="p-4">{membership.user.email ?? "—"}</td>
                   <td className="p-4">{membership.role}</td>
                   <td className="p-4">
-                    <form action={updateUserRole} className="flex items-center gap-2">
+                    <form action={async (formData) => { await updateUserRole(formData); }} className="flex items-center gap-2">
                       <input type="hidden" name="userId" value={membership.userId} />
                       <select name="role" defaultValue={membership.role} className="rounded-lg border px-3 py-2">
                         {roles.map((role) => <option key={role} value={role}>{role}</option>)}
