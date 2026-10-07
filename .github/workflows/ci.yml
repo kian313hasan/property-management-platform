@@ -41,6 +41,8 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
+      - name: Build Docker image
+        run: docker build --tag property-management-platform:ci .
 
   e2e:
     runs-on: ubuntu-latest
