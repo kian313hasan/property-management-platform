@@ -1,0 +1,3 @@
+-- Financial precision migration.
+-- Generated SQL must be reviewed and executed against the PostgreSQL database before deployment.
+-- See prisma/schema.prisma: monetary fields are Decimal.
