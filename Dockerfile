@@ -8,7 +8,7 @@ RUN npm install
 
 FROM deps AS builder
 COPY . .
-RUN npm run build
+RUN --mount=type=secret,id=database_url,env=DATABASE_URL --mount=type=secret,id=auth_secret,env=AUTH_SECRET npm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
