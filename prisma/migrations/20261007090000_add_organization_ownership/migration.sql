@@ -44,6 +44,20 @@ CREATE UNIQUE INDEX "Expense_id_organizationId_key" ON "Expense"("id", "organiza
 CREATE INDEX "MaintenanceRequest_organizationId_idx" ON "MaintenanceRequest"("organizationId");
 CREATE UNIQUE INDEX "MaintenanceRequest_id_organizationId_key" ON "MaintenanceRequest"("id", "organizationId");
 
+INSERT INTO "OrganizationMember" ("id", "organizationId", "userId", "role", "createdAt", "updatedAt")
+SELECT 'legacy-membership-' || "User"."id",
+       (SELECT "id" FROM "Organization" WHERE "slug" = 'default'),
+       "User"."id",
+       "User"."role",
+       CURRENT_TIMESTAMP,
+       CURRENT_TIMESTAMP
+FROM "User"
+WHERE NOT EXISTS (
+  SELECT 1 FROM "OrganizationMember" m
+  WHERE m."organizationId" = (SELECT "id" FROM "Organization" WHERE "slug" = 'default')
+    AND m."userId" = "User"."id"
+);
+
 ALTER TABLE "Property" ADD CONSTRAINT "Property_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Unit" ADD CONSTRAINT "Unit_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Tenant" ADD CONSTRAINT "Tenant_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
