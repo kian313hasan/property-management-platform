@@ -62,4 +62,44 @@ describe.skipIf(!enabled)("tenant isolation integration", () => {
     await clearLoginRateLimit(email, ip);
     expect(await checkLoginRateLimit(email, ip)).toBe(false);
   });
+
+  it("creates a hashed single-use password reset token and invalidates it after reset", async () => {
+    const { requestPasswordReset, consumePasswordReset } = await import("@/lib/security/password-reset");
+    const bcrypt = await import("bcryptjs");
+    const email = `password-reset-${Date.now()}@example.test`;
+
+    const { PrismaClient } = await import("@prisma/client");
+    const { PrismaPg } = await import("@prisma/adapter-pg");
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) throw new Error("DATABASE_URL is required for integration tests");
+    const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+
+    try {
+      const user = await db.user.create({
+        data: {
+          email,
+          password: await bcrypt.hash("old-password-123", 12),
+          role: "STAFF",
+        },
+      });
+
+      const rawToken = await requestPasswordReset(email);
+      expect(rawToken).toEqual(expect.any(String));
+
+      const stored = await db.passwordResetToken.findFirst({ where: { userId: user.id } });
+      expect(stored?.tokenHash).toBeTruthy();
+      expect(stored?.tokenHash).not.toBe(rawToken);
+
+      expect(await consumePasswordReset(rawToken!, "new-password-123")).toBe(true);
+      expect(await consumePasswordReset(rawToken!, "another-password-123")).toBe(false);
+
+      const updated = await db.user.findUnique({ where: { id: user.id }, select: { password: true } });
+      expect(updated).not.toBeNull();
+      expect(await bcrypt.compare("new-password-123", updated!.password)).toBe(true);
+    } finally {
+      await db.user.deleteMany({ where: { email } });
+      await db.$disconnect();
+    }
+  });
+
 });
