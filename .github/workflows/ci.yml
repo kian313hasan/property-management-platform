@@ -55,9 +55,9 @@ jobs:
           POSTGRES_DB: property_management
         ports:
           - 5432:5432
-      steps:
-        - uses: actions/checkout@v4
-        - uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
           with:
             node-version: 22
             cache: npm
