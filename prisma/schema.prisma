@@ -80,6 +80,7 @@ model User {
   maintenanceRequests MaintenanceRequest[] @relation("AssignedMaintenance")
   memberships OrganizationMember[]
   auditLogs AuditLog[] @relation("AuditActor")
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Property {
