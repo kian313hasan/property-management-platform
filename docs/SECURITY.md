@@ -12,7 +12,8 @@ This is a security baseline, not a claim of complete security.
 - Production errors map to safe public messages.
 - Structured logs exclude passwords, tokens, API keys, and unnecessary sensitive PII.
 - File uploads require allowlists, size limits, generated object keys, malware scanning where required, and private storage URLs.
-- Rate limiting is required for authentication, password reset, uploads, and expensive endpoints.
+- Authentication login attempts are rate-limited with a persistent PostgreSQL-backed window keyed by normalized email and, when available, client IP.
+- Rate limiting remains required for password reset, uploads, and expensive endpoints.
 - Audit logs are append-only to application users.
 - Dependencies are reviewed and scanned in CI.
 
@@ -30,4 +31,5 @@ Deny by default. Fail closed on missing authentication, organization context, or
 - Authentication success/failure and organization role changes are written to AuditLog through a best-effort audit service.
 - Organization ownership is enforced both in application queries and, for cross-entity relations, with PostgreSQL composite foreign keys using `(resourceId, organizationId)`.
 - Optional cross-entity references use restrictive delete behavior where PostgreSQL cannot null only the resource ID without also nulling the mandatory organization ID.
-- Login rate limiting, password reset/MFA, file scanning/storage controls, and finalized CSP remain explicit security gates before production security sign-off.
+- Login rate limiting is implemented and covered by integration tests.
+- Password reset/MFA, file scanning/storage controls, and finalized CSP remain explicit security gates before production security sign-off.
