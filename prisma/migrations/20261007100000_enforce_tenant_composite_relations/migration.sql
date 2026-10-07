@@ -46,7 +46,7 @@ ALTER TABLE "Expense"
   ADD CONSTRAINT "Expense_unitId_organizationId_fkey"
   FOREIGN KEY ("unitId", "organizationId")
   REFERENCES "Unit" ("id", "organizationId")
-  ON DELETE SET NULL ON UPDATE CASCADE;
+  ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE "MaintenanceRequest"
   ADD CONSTRAINT "MaintenanceRequest_propertyId_organizationId_fkey"
