@@ -32,7 +32,7 @@ async function consume(key: string): Promise<boolean> {
       "blockedUntil" = CASE
         WHEN "LoginRateLimit"."blockedUntil" > ${now} THEN "LoginRateLimit"."blockedUntil"
         WHEN "LoginRateLimit"."windowStart" <= ${windowStart} THEN NULL
-        WHEN "LoginRateLimit"."attempts" + 1 >= ${MAX_ATTEMPTS} THEN ${blockedUntil}
+        WHEN "LoginRateLimit"."attempts" + 1 > ${MAX_ATTEMPTS} THEN ${blockedUntil}
         ELSE NULL
       END,
       "updatedAt" = ${now}
