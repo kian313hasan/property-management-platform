@@ -39,3 +39,66 @@ ALTER TABLE "MaintenanceRequest" ADD CONSTRAINT "MaintenanceRequest_tenantId_fke
 ALTER TABLE "MaintenanceRequest" ADD CONSTRAINT "MaintenanceRequest_assignedToId_fkey" FOREIGN KEY ("assignedToId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TYPE "PermissionKey" AS ENUM ('ORGANIZATION_READ','ORGANIZATION_MANAGE','USERS_READ','USERS_MANAGE','PROPERTIES_READ','PROPERTIES_MANAGE','FINANCE_READ','FINANCE_MANAGE','MAINTENANCE_READ','MAINTENANCE_MANAGE','REPORTS_READ','AUDIT_READ','FILES_MANAGE');
+
+CREATE TABLE "Organization" (
+  "id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "slug" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "Organization_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "Organization_slug_key" ON "Organization"("slug");
+
+CREATE TABLE "OrganizationMember" (
+  "id" TEXT NOT NULL,
+  "organizationId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "role" "Role" NOT NULL DEFAULT 'STAFF',
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "OrganizationMember_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "OrganizationMember_organizationId_userId_key" ON "OrganizationMember"("organizationId","userId");
+CREATE INDEX "OrganizationMember_userId_idx" ON "OrganizationMember"("userId");
+CREATE INDEX "OrganizationMember_organizationId_role_idx" ON "OrganizationMember"("organizationId","role");
+
+CREATE TABLE "Permission" (
+  "id" TEXT NOT NULL,
+  "key" "PermissionKey" NOT NULL,
+  "description" TEXT,
+  CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "Permission_key_key" ON "Permission"("key");
+
+CREATE TABLE "RolePermission" (
+  "role" "Role" NOT NULL,
+  "permissionId" TEXT NOT NULL,
+  CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("role","permissionId")
+);
+CREATE INDEX "RolePermission_permissionId_idx" ON "RolePermission"("permissionId");
+
+CREATE TABLE "AuditLog" (
+  "id" TEXT NOT NULL,
+  "organizationId" TEXT,
+  "actorUserId" TEXT,
+  "action" TEXT NOT NULL,
+  "resourceType" TEXT,
+  "resourceId" TEXT,
+  "requestId" TEXT NOT NULL,
+  "metadata" JSONB,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX "AuditLog_organizationId_createdAt_idx" ON "AuditLog"("organizationId","createdAt");
+CREATE INDEX "AuditLog_actorUserId_createdAt_idx" ON "AuditLog"("actorUserId","createdAt");
+CREATE INDEX "AuditLog_resourceType_resourceId_idx" ON "AuditLog"("resourceType","resourceId");
+CREATE INDEX "AuditLog_requestId_idx" ON "AuditLog"("requestId");
+
+ALTER TABLE "OrganizationMember" ADD CONSTRAINT "OrganizationMember_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "OrganizationMember" ADD CONSTRAINT "OrganizationMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
