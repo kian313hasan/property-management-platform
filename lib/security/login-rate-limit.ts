@@ -18,7 +18,7 @@ async function consume(key: string): Promise<boolean> {
 
   const rows = await prisma.$queryRaw<Array<{ attempts: number; blockedUntil: Date | null }>>`
     INSERT INTO "LoginRateLimit" ("id", "key", "windowStart", "attempts", "updatedAt")
-    VALUES (gen_random_uuid()::text, ${key}, ${now}, 1, ${now})
+    VALUES (md5(random()::text || clock_timestamp()::text), ${key}, ${now}, 1, ${now})
     ON CONFLICT ("key") DO UPDATE
     SET
       "windowStart" = CASE
