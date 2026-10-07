@@ -14,7 +14,7 @@ PostgreSQL + Prisma 7. Prisma 7 configures the database URL in prisma.config.ts 
 - AuditLog: immutable security/audit trail.
 
 ## Tenant isolation
-Business resources must contain organizationId or be reachable only through an organization-scoped parent. Every repository/use-case query must receive organization context from the authenticated server session.
+Business resources must contain organizationId or be reachable only through an organization-scoped parent. Every repository/use-case query must receive organization context from the authenticated server session. Cross-entity relations also carry organizationId and are protected by composite PostgreSQL foreign keys so application mistakes cannot create cross-tenant references.
 
 Never accept organizationId from the client as authority.
 
