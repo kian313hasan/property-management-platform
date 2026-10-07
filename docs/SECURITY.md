@@ -4,7 +4,7 @@ This is a security baseline, not a claim of complete security.
 
 ## Controls
 - Server-side authentication and authorization.
-- Organization boundary derived from server session/membership.
+- Organization boundary derived from server session/membership, with an explicit active-organization selector validated against the authenticated user's memberships.
 - Zod validation at trust boundaries.
 - Prisma parameterized queries; raw SQL requires review.
 - Secure cookies through Auth.js.
@@ -32,4 +32,5 @@ Deny by default. Fail closed on missing authentication, organization context, or
 - Organization ownership is enforced both in application queries and, for cross-entity relations, with PostgreSQL composite foreign keys using `(resourceId, organizationId)`.
 - Optional cross-entity references use restrictive delete behavior where PostgreSQL cannot null only the resource ID without also nulling the mandatory organization ID.
 - Login rate limiting is implemented and covered by integration tests.
-- Password reset/MFA, file scanning/storage controls, and a nonce-based strict CSP remain explicit security gates before production security sign-off. The current CSP is a hardened baseline, not a claim of a fully strict nonce policy.
+- Password reset token issuance/consumption is implemented with hashed, single-use, expiring tokens and non-enumerating request behavior. Email delivery is intentionally not bundled because no mail provider is configured.
+- MFA/passkeys, file scanning/storage controls, and a nonce-based strict CSP remain explicit security gates before production security sign-off. The current CSP is a hardened baseline, not a claim of a fully strict nonce policy.
