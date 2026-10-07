@@ -335,6 +335,13 @@ model RolePermission {
   @@index([permissionId])
 }
 
+model RateLimitBucket {
+  key         String   @id
+  windowStart DateTime
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
 model AuditLog {
   id             String        @id @default(cuid())
   organizationId String?
