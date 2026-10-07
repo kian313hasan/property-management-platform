@@ -8,7 +8,7 @@ This is a security baseline, not a claim of complete security.
 - Zod validation at trust boundaries.
 - Prisma parameterized queries; raw SQL requires review.
 - Secure cookies through Auth.js.
-- Security headers configured centrally.
+- Security headers configured centrally, including a hardened Content Security Policy baseline.
 - Production errors map to safe public messages.
 - Structured logs exclude passwords, tokens, API keys, and unnecessary sensitive PII.
 - File uploads require allowlists, size limits, generated object keys, malware scanning where required, and private storage URLs.
@@ -28,8 +28,8 @@ Deny by default. Fail closed on missing authentication, organization context, or
 
 ## Current foundation decisions
 - Public registration is disabled; users are created by an organization SUPER_ADMIN so every account receives an organization membership.
-- Authentication success/failure and organization role changes are written to AuditLog through a best-effort audit service.
+- Authentication success/failure, logout, and organization role changes are written to AuditLog through a best-effort audit service.
 - Organization ownership is enforced both in application queries and, for cross-entity relations, with PostgreSQL composite foreign keys using `(resourceId, organizationId)`.
 - Optional cross-entity references use restrictive delete behavior where PostgreSQL cannot null only the resource ID without also nulling the mandatory organization ID.
 - Login rate limiting is implemented and covered by integration tests.
-- Password reset/MFA, file scanning/storage controls, and finalized CSP remain explicit security gates before production security sign-off.
+- Password reset/MFA, file scanning/storage controls, and a nonce-based strict CSP remain explicit security gates before production security sign-off. The current CSP is a hardened baseline, not a claim of a fully strict nonce policy.
