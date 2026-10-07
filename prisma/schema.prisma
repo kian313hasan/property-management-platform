@@ -48,6 +48,22 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum PermissionKey {
+  ORGANIZATION_READ
+  ORGANIZATION_MANAGE
+  USERS_READ
+  USERS_MANAGE
+  PROPERTIES_READ
+  PROPERTIES_MANAGE
+  FINANCE_READ
+  FINANCE_MANAGE
+  MAINTENANCE_READ
+  MAINTENANCE_MANAGE
+  REPORTS_READ
+  AUDIT_READ
+  FILES_MANAGE
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -62,6 +78,8 @@ model User {
   updatedAt     DateTime  @updatedAt
   managedProperties Property[] @relation("PropertyManager")
   maintenanceRequests MaintenanceRequest[] @relation("AssignedMaintenance")
+  memberships OrganizationMember[]
+  auditLogs AuditLog[] @relation("AuditActor")
 }
 
 model Property {
@@ -239,4 +257,65 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members   OrganizationMember[]
+  auditLogs AuditLog[]
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           Role         @default(STAFF)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, role])
+}
+
+model Permission {
+  id          String       @id @default(cuid())
+  key         PermissionKey @unique
+  description String?
+  roleLinks   RolePermission[]
+}
+
+model RolePermission {
+  role         Role
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([role, permissionId])
+  @@index([permissionId])
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  actorUserId    String?
+  action         String
+  resourceType   String?
+  resourceId     String?
+  requestId      String
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor          User?         @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([requestId])
 }
