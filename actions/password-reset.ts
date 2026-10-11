@@ -1,16 +1,32 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requestPasswordReset } from "@/lib/security/password-reset";
+import { consumePasswordReset } from "@/lib/security/password-reset";
 
-const schema = z.object({ email: z.string().email() });
+const resetSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(128),
+  confirmPassword: z.string().min(8).max(128),
+}).refine((data) => data.password === data.confirmPassword, {
+  path: ["confirmPassword"],
+});
 
-export async function requestPasswordResetAction(formData: FormData) {
-  const parsed = schema.safeParse({ email: formData.get("email") });
-  if (parsed.success) {
-    await requestPasswordReset(parsed.data.email);
+export async function completePasswordResetAction(formData: FormData) {
+  const parsed = resetSchema.safeParse({
+    token: formData.get("token"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success) {
+    redirect("/reset-password?error=invalid");
   }
 
-  // Always return the same response to avoid account enumeration.
-  return { success: true };
+  const completed = await consumePasswordReset(parsed.data.token, parsed.data.password);
+  if (!completed) {
+    redirect("/reset-password?error=invalid");
+  }
+
+  redirect("/login?passwordReset=success");
 }
