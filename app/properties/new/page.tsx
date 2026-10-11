@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { requireOrganizationContext } from "@/lib/authorization/organization";
 import NewPropertyForm from "./new-property-form";
 
 export default async function NewPropertyPage() {
   const session = await auth();
   if (!session) redirect("/login");
-  if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "PROPERTY_MANAGER") redirect("/properties");
+  const context = await requireOrganizationContext();
+  if (context.role !== "SUPER_ADMIN" && context.role !== "PROPERTY_MANAGER") redirect("/properties");
 
   return (
     <main className="min-h-screen bg-slate-50" dir="rtl">
