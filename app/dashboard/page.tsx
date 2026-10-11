@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   const leaseWhere = isManager ? { organizationId: context.organizationId, status: "ACTIVE" as const, unit: { property: { managerId: session.user.id } } } : { organizationId: context.organizationId, status: "ACTIVE" as const };
   const [propertyCount, tenantCount, activeLeaseCount, paidPaymentCount, revenue, expenses] = await Promise.all([
     prisma.property.count({ where: propertyWhere }),
-    prisma.tenant.count({ where: isManager ? { organizationId: context.organizationId, leases: { some: { organizationId: context.organizationId, unit: { property: { managerId: context.userId } } } } } : { organizationId: context.organizationId } }),
+    prisma.tenant.count({ where: isManager ? { organizationId: context.organizationId, OR: [{ leases: { none: { organizationId: context.organizationId } } }, { leases: { some: { organizationId: context.organizationId, unit: { property: { managerId: context.userId } } } } }] } : { organizationId: context.organizationId } }),
     prisma.lease.count({ where: leaseWhere }),
     prisma.payment.count({ where: paymentWhere }),
     prisma.payment.aggregate({ _sum: { amount: true }, where: paymentWhere }),
