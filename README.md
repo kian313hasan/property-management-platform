@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# منصة إدارة العقارات
 
-## Getting Started
+منصة ويب لإدارة العقارات والوحدات والمستأجرين وعقود الإيجار والمدفوعات والمصروفات والصيانة، مع دعم المؤسسات والصلاحيات وسجل التدقيق.
 
-First, run the development server:
+> **حالة المشروع:** نسخة تطوير وتسليم جامعي. ليست إعداداً إنتاجياً نهائياً. يلزم تشغيلها محلياً مع PostgreSQL؛ لا تحتاج إلى قاعدة بيانات مستضافة أو إعداد نشر لاستعراضها.
+
+## التقنيات
+
+- Next.js وReact وTypeScript
+- PostgreSQL وPrisma ORM
+- Auth.js لتسجيل الدخول
+- Tailwind CSS
+- Vitest للاختبارات، وPlaywright لاختبارات المتصفح
+- Docker وGitHub Actions لفحوصات البناء والجودة
+
+## المتطلبات
+
+- Node.js 22
+- npm
+- PostgreSQL 16 أو إصدار متوافق
+- Git
+
+## التشغيل المحلي
+
+1. استنسخ المستودع وافتح مجلده:
+
+   ```bash
+   git clone https://github.com/kian313hasan/property-management-platform.git
+   cd property-management-platform
+   ```
+
+2. ثبّت الاعتماديات:
+
+   ```bash
+   npm install
+   ```
+
+3. أنشئ قاعدة PostgreSQL محلية فارغة باسم `property_management`، وأنشئ ملف إعدادات محلياً من المثال:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   على Windows PowerShell استخدم `Copy-Item .env.example .env`.
+
+4. حدّث `DATABASE_URL` في `.env` ليتطابق مع اسم مستخدم PostgreSQL وكلمة مروره المحليين. أنشئ قيمة سرية عشوائية لـ `AUTH_SECRET`، ولا تشارك ملف `.env` أو ترفعه إلى Git.
+
+5. أنشئ عميل Prisma وطبّق الترحيلات:
+
+   ```bash
+   npx prisma generate
+   npx prisma migrate deploy
+   ```
+
+6. شغّل خادم التطوير:
+
+   ```bash
+   npm run dev
+   ```
+
+7. افتح [http://localhost:3000](http://localhost:3000).
+
+> إذا لم تكن PostgreSQL مثبتة أو لم تكن قاعدة البيانات موجودة، فلن تعمل ميزات تعتمد على البيانات حتى يتم إعداد قاعدة محلية. لا تستخدم بيانات حقيقية أو حساسة في بيئة الجامعة التجريبية.
+
+## أوامر التحقق
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run typecheck
+npm test
+npm run test:integration
+npm run build
+npm run test:e2e
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- اختبارات التكامل تحتاج إلى قاعدة PostgreSQL محلية قابلة للوصول عبر `DATABASE_URL).
+- اختبارات Playwright تشغّل خادم Next.js حسب الإعداد الموجود في `playwright.config.ts`.
+- يمكن الاطلاع على نتيجة فحوصات المستودع من تبويب Actions في GitHub.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## إعدادات البيئة
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+الإعدادات الأساسية موجودة في `.env.example`. القيم فيه أمثلة محلية فقط ويجب استبدالها بالقيم المناسبة على الجهاز. لا تضع مفاتيح أو كلمات مرور فعلية في هذا الملف النموذجي.
 
-## Learn More
+## نقاط يجب معرفتها عند التسليم
 
-To learn more about Next.js, take a look at the following resources:
+- التسجيل العام معطّل؛ إنشاء المستخدمين مخصص لمسؤول المؤسسة.
+- استعادة كلمة المرور لديها أساس لتوليد رمز عشوائي وتخزين بصمته وتحديد مدة صلاحيته، لكن تسليم رسالة البريد الإلكتروني وواجهة إكمال إعادة التعيين تحتاجان إلى استكمال قبل اعتبار الوظيفة مكتملة.
+- التخزين الخاص للملفات، إعدادات الأمان الإنتاجية، وربط البريد الحقيقي ليست ضمن إعداد التشغيل المحلي الأساسي.
+- بيانات المؤسسات يجب أن تبقى معزولة، والأدوار يجب أن تُراجع عند اختبار كل شاشة وعملية.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## بنية المشروع
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `app/`: صفحات وواجهات Next.js
+- `actions/`: إجراءات الخادم
+- `lib/`: المصادقة والصلاحيات والأمان والخدمات
+- `prisma/`: مخطط قاعدة البيانات وترحيلاتها
+- `tests/`: اختبارات الوحدة والتكامل والمتصفح
 
-## Deploy on Vercel
+## الترخيص
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+المستودع خاص بالمشروع الجامعي؛ أضف معلومات الترخيص المطلوبة من الجامعة عند تحديدها.
