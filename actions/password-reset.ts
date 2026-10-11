@@ -19,8 +19,8 @@ export async function requestPasswordResetAction(formData: FormData) {
     await requestPasswordReset(parsed.data.email);
   }
 
-  // Always return the same response to avoid account enumeration.
-  return { success: true };
+  // Keep the response generic to avoid account enumeration.
+  redirect("/forgot-password?requested=1");
 }
 
 export async function completePasswordResetAction(formData: FormData) {
