@@ -21,7 +21,12 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
         <p className="mt-2 text-sm text-slate-500">
           أدخل كلمة مرور جديدة لا تقل عن 8 أحرف. صلاحية رابط الاستعادة محدودة.
         </p>
-        {error === "validation" && (\n          <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">\n            تأكد من تطابق كلمتي المرور وأنهما تحتويان على 8 أحرف على الأقل.\n          </p>\n        )}\n        {error === "invalid" && (
+        {error === "validation" && (
+          <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+            تأكد من تطابق كلمتي المرور وأنهما تحتويان على 8 أحرف على الأقل.
+          </p>
+        )}
+        {error === "invalid" && (
           <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
             رابط الاستعادة غير صالح أو منتهي الصلاحية. اطلب رابطاً جديداً ثم حاول مرة أخرى.
           </p>
