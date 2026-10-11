@@ -34,7 +34,7 @@ export default async function DashboardPage() {
       <section className="mb-8 rounded-3xl bg-slate-900 p-7 text-white"><div className="mb-4 flex flex-wrap items-center gap-3">
       <span className="text-sm text-slate-300">المؤسسة: {context.organization.name}</span>
       {context.memberships.length > 1 && (
-        <form action={switchOrganization} className="flex items-center gap-2">
+        <form action={async (formData: FormData) => { "use server"; await switchOrganization(formData); }} className="flex items-center gap-2">
           <select name="organizationId" defaultValue={context.organizationId} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white">
             {context.memberships.map((membership) => (
               <option key={membership.organizationId} value={membership.organizationId}>{membership.organization.name}</option>
