@@ -73,7 +73,7 @@ npm run build
 npm run test:e2e
 ```
 
-- اختبارات التكامل تحتاج إلى قاعدة PostgreSQL محلية قابلة للوصول عبر `DATABASE_URL).
+- اختبارات التكامل تحتاج إلى قاعدة PostgreSQL محلية قابلة للوصول عبر `DATABASE_URL`.
 - اختبارات Playwright تشغّل خادم Next.js حسب الإعداد الموجود في `playwright.config.ts`.
 - يمكن الاطلاع على نتيجة فحوصات المستودع من تبويب Actions في GitHub.
 
