@@ -12,14 +12,31 @@ const resetSchema = z.object({
   path: ["confirmPassword"],
 });
 
+export async function requestPasswordResetAction(formData: FormData) {
+  const parsed = z.object({ email: z.string().email() }).safeParse({
+    email: formData.get("email"),
+  });
+
+  if (parsed.success) {
+    await (await import("@/lib/security/password-reset")).requestPasswordReset(parsed.data.email);
+  }
+
+  // Always return the same response to avoid account enumeration.
+  return { success: true };
+}
+
 export async function completePasswordResetAction(formData: FormData) {
+  const token = formData.get("token");
   const parsed = resetSchema.safeParse({
-    token: formData.get("token"),
+    token,
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
   });
 
   if (!parsed.success) {
+    if (typeof token === "string" && token.length > 0) {
+      redirect(`/reset-password?error=validation&token=${encodeURIComponent(token)}`);
+    }
     redirect("/reset-password?error=invalid");
   }
 
