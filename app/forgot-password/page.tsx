@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
         <p className="mt-2 text-sm text-slate-500">
           أدخل بريدك الإلكتروني. إذا كان الحساب موجودًا، سيتم إرسال تعليمات الاستعادة.
         </p>
-        <form action={requestPasswordResetAction} className="mt-6 space-y-4">
+        <form action={async (formData: FormData) => { "use server"; await requestPasswordResetAction(formData); }} className="mt-6 space-y-4">
           <label className="block text-sm font-semibold">
             البريد الإلكتروني
             <input name="email" type="email" required className="mt-2 w-full rounded-xl border px-4 py-3" />
