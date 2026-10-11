@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { consumePasswordReset } from "@/lib/security/password-reset";
+import { consumePasswordReset, requestPasswordReset } from "@/lib/security/password-reset";
 
+const requestSchema = z.object({ email: z.string().email() });
 const resetSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(8).max(128),
@@ -13,12 +14,9 @@ const resetSchema = z.object({
 });
 
 export async function requestPasswordResetAction(formData: FormData) {
-  const parsed = z.object({ email: z.string().email() }).safeParse({
-    email: formData.get("email"),
-  });
-
+  const parsed = requestSchema.safeParse({ email: formData.get("email") });
   if (parsed.success) {
-    await (await import("@/lib/security/password-reset")).requestPasswordReset(parsed.data.email);
+    await requestPasswordReset(parsed.data.email);
   }
 
   // Always return the same response to avoid account enumeration.
