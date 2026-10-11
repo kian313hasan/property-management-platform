@@ -60,7 +60,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   secret: env.AUTH_SECRET,
   events: {
-    async signOut({ token }) {
+    async signOut(message) {
+      const token = "token" in message ? message.token : null;
       const requestId = randomUUID();
       const actorUserId = typeof token?.id === "string" ? token.id : null;
       await recordAuditEvent({
