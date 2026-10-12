@@ -13,7 +13,7 @@ const organizationSlug = (process.env.BOOTSTRAP_ORGANIZATION_SLUG?.trim() || "lo
   .replace(/[^a-z0-9-]+/g, "-")
   .replace(/^-+|-+$/g, "");
 
-if (!databaseUrl || !name || name.length < 2 || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+if (process.env.NODE_ENV === "production") {\n  console.error("أداة الإعداد الأولي مخصصة للتشغيل المحلي وليست لبيئة الإنتاج.");\n  process.exit(1);\n}\n\nif (!databaseUrl || !name || name.length < 2 || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
     !password || password.length < 12 || !organizationName || organizationName.length < 2 || !organizationSlug) {
   console.error("ضبط DATABASE_URL وبيانات مسؤول المؤسسة في ملف .env أولاً. كلمة المرور يجب أن تكون 12 حرفاً على الأقل.");
   process.exit(1);
