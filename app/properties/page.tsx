@@ -15,6 +15,7 @@ export default async function PropertiesPage() {
   const session = await auth();
   if (!session) redirect("/login");
   const context = await requireOrganizationContext();
+  if (context.role !== "SUPER_ADMIN" && context.role !== "PROPERTY_MANAGER") redirect("/dashboard");
 
   const properties = await prisma.property.findMany({
     where: context.role === "PROPERTY_MANAGER" ? { organizationId: context.organizationId, managerId: session.user.id } : { organizationId: context.organizationId },
