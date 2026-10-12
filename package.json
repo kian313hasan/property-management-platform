@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:integration": "INTEGRATION_TESTS=1 vitest run tests/integration"
+    "test:integration": "INTEGRATION_TESTS=1 vitest run tests/integration",
+    "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
