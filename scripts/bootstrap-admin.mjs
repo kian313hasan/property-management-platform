@@ -4,6 +4,14 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
 const databaseUrl = process.env.DATABASE_URL;
+const databaseHost = (() => {
+  try {
+    return new URL(databaseUrl).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+})();
+const isLocalDatabase = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(databaseHost);
 const name = process.env.BOOTSTRAP_ADMIN_NAME?.trim();
 const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase();
 const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
@@ -13,8 +21,8 @@ const organizationSlug = (process.env.BOOTSTRAP_ORGANIZATION_SLUG?.trim() || "lo
   .replace(/[^a-z0-9-]+/g, "-")
   .replace(/^-+|-+$/g, "");
 
-if (process.env.NODE_ENV === "production") {
-  console.error("أداة الإعداد الأولي مخصصة للتشغيل المحلي وليست لبيئة الإنتاج.");
+if (process.env.NODE_ENV === "production" || !isLocalDatabase) {
+  console.error("أداة الإعداد الأولي مخصصة لقاعدة PostgreSQL محلية فقط، ولا تعمل في بيئة الإنتاج أو مع عنوان قاعدة بيانات غير محلي.");
   process.exit(1);
 }
 
