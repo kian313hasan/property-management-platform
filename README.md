@@ -52,7 +52,15 @@
    npx prisma migrate deploy
    ```
 
-6. شغّل خادم التطوير:
+6. في ملف `.env` المحلي، املأ `BOOTSTRAP_ADMIN_NAME` و`BOOTSTRAP_ADMIN_EMAIL` و`BOOTSTRAP_ADMIN_PASSWORD` (12 حرفاً على الأقل) و`BOOTSTRAP_ORGANIZATION_NAME`. ثم أنشئ المؤسسة المحلية وحساب المسؤول الأول:
+
+   ```bash
+   npm run bootstrap:admin
+   ```
+
+   هذا الأمر يعمل فقط عندما تكون قاعدة البيانات خالية من المستخدمين والمؤسسات؛ لا يعيد تهيئة قاعدة تحتوي بيانات. لا تحفظ بيانات الدخول الحقيقية في Git.
+
+7. شغّل خادم التطوير:
 
    ```bash
    npm run dev
