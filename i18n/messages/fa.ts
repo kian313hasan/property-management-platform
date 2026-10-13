@@ -15,6 +15,7 @@ export const fa: Messages = {
     back: "بازگشت",
     none: "—",
     appTagline: "پلتفرم مدیریت املاک",
+    appDescription: "پلتفرم حرفه‌ای مدیریت املاک با پشتیبانی از چند سازمان.",
   },
   nav: {
     dashboard: "داشبورد",
