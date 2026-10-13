@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { propertyScope } from "@/lib/authorization/scope";
 import { requireOrganizationContext } from "@/lib/authorization/organization";
 
 const typeLabels: Record<string, string> = {
@@ -18,7 +19,7 @@ export default async function PropertiesPage() {
   if (context.role !== "SUPER_ADMIN" && context.role !== "PROPERTY_MANAGER") redirect("/dashboard");
 
   const properties = await prisma.property.findMany({
-    where: context.role === "PROPERTY_MANAGER" ? { organizationId: context.organizationId, managerId: session.user.id } : { organizationId: context.organizationId },
+    where: propertyScope(context),
     include: { _count: { select: { units: true } } },
     orderBy: { createdAt: "desc" },
   });
