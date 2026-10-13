@@ -37,4 +37,3 @@ describe("UI conventions", () => {
     expect(offenders).toEqual([]);
   });
 });
-});
