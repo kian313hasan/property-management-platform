@@ -6,6 +6,7 @@ import {
   idSchema,
   isoDateSchema,
   localeSchema,
+  moneyField,
   moneySchema,
   passwordSchema,
 } from "@/lib/validation/common";
@@ -24,11 +25,25 @@ describe("common validation", () => {
     expect(passwordSchema.safeParse("x".repeat(PASSWORD_MAX_LENGTH + 1)).success).toBe(false);
   });
 
-  it("accepts money with at most two decimals and rejects the rest", () => {
-    expect(moneySchema.parse("1200.50")).toBe(1200.5);
-    for (const bad of ["0", "-5", "1.005", "abc", "Infinity", "1e15"]) {
+  it("keeps money as a decimal string and never converts it to a float", () => {
+    expect(moneySchema.parse("1200.50")).toBe("1200.50");
+    expect(moneySchema.parse(" 15 ")).toBe("15");
+    expect(moneySchema.parse("0.10")).toBe("0.10");
+  });
+
+  it("rejects non-positive, over-precise, malformed and oversized money", () => {
+    for (const bad of ["0", "0.00", "-5", "1.005", "abc", "Infinity", "1e15", "1,5", "01", "", "1000000000000"]) {
       expect(moneySchema.safeParse(bad).success, bad).toBe(false);
     }
+  });
+
+  it("moneyField can allow zero and reports the given message", () => {
+    const optionalCost = moneyField("custom.key", { allowZero: true });
+    expect(optionalCost.parse("0")).toBe("0");
+    expect(optionalCost.parse("0.00")).toBe("0.00");
+    const result = moneyField("custom.key").safeParse("0");
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("custom.key");
   });
 
   it("accepts only real ISO calendar dates", () => {

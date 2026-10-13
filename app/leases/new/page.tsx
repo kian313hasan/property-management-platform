@@ -1,2 +1,72 @@
-import Link from "next/link"; import {auth} from "@/lib/auth"; import {prisma} from "@/lib/prisma"; import {redirect} from "next/navigation"; import {requireOrganizationContext} from "@/lib/authorization/organization"; import NewLeaseForm from "./new-lease-form";
-export default async function NewLeasePage(){const s=await auth();if(!s)redirect("/login");const context=await requireOrganizationContext();if(context.role!=="SUPER_ADMIN"&&context.role!=="PROPERTY_MANAGER")redirect("/leases");const units=await prisma.unit.findMany({where:{status:"AVAILABLE",organizationId:context.organizationId,...(context.role==="PROPERTY_MANAGER"?{property:{managerId:context.userId}}:{})},include:{property:true},orderBy:{property:{name:"asc"}}});const tenants=await prisma.tenant.findMany({where:{organizationId:context.organizationId,...(context.role==="PROPERTY_MANAGER"?{OR:[{leases:{none:{organizationId:context.organizationId}}},{leases:{some:{organizationId:context.organizationId,unit:{property:{managerId:context.userId}}}}}]}:{})},orderBy:{name:"asc"}});return <main className="min-h-screen bg-slate-50" dir="rtl"><div className="mx-auto max-w-2xl px-6 py-10"><Link href="/leases" className="text-sm font-semibold text-slate-500">← العودة للعقود</Link><div className="mt-5 rounded-3xl border bg-white p-7 shadow-sm"><h1 className="text-2xl font-bold">إنشاء عقد إيجار</h1><p className="mt-2 text-sm text-slate-500">اربط المستأجر بوحدة متاحة وحدد مدة العقد وقيمته.</p><NewLeaseForm units={units} tenants={tenants}/></div></div></main>}
+import { createLease } from "@/actions/leases";
+import { ActionForm } from "@/components/forms/action-form";
+import { FormPage } from "@/components/layout/form-page";
+import { Alert } from "@/components/ui/alert";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+import { tenantScope, unitScope } from "@/lib/authorization/scope";
+import { prisma } from "@/lib/prisma";
+
+export default async function NewLeasePage() {
+  const context = await requirePageAccess("properties:manage", "/leases");
+  const { t } = await getI18n();
+
+  const [units, tenants] = await Promise.all([
+    prisma.unit.findMany({
+      where: { ...unitScope(context), status: "AVAILABLE" },
+      select: { id: true, unitNumber: true, property: { select: { name: true } } },
+      orderBy: [{ property: { name: "asc" } }, { unitNumber: "asc" }],
+    }),
+    prisma.tenant.findMany({ where: tenantScope(context), select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  ]);
+
+  return (
+    <FormPage backHref="/leases" backLabel={t("leases.backToList")} title={t("leases.newTitle")} hint={t("leases.newHint")}>
+      <ActionForm action={createLease} submitLabel={t("leases.submit")} disabled={units.length === 0 || tenants.length === 0}>
+        <Field htmlFor="unitId" label={t("leases.unit")}>
+          <Select id="unitId" name="unitId" required>
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {t("leases.unitOption", { property: unit.property.name, unit: unit.unitNumber })}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field htmlFor="tenantId" label={t("leases.tenant")}>
+          <Select id="tenantId" name="tenantId" required>
+            {tenants.map((tenant) => (
+              <option key={tenant.id} value={tenant.id}>
+                {tenant.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field htmlFor="startDate" label={t("leases.startDate")}>
+            <Input id="startDate" name="startDate" type="date" required dir="ltr" />
+          </Field>
+          <Field htmlFor="endDate" label={t("leases.endDate")}>
+            <Input id="endDate" name="endDate" type="date" required dir="ltr" />
+          </Field>
+          <Field htmlFor="rentAmount" label={t("leases.rent")}>
+            <Input id="rentAmount" name="rentAmount" inputMode="decimal" required placeholder="1500" dir="ltr" />
+          </Field>
+          <Field htmlFor="depositAmount" label={t("leases.deposit")}>
+            <Input id="depositAmount" name="depositAmount" inputMode="decimal" placeholder="1500" dir="ltr" />
+          </Field>
+          <Field htmlFor="paymentDueDay" label={t("leases.dueDay")}>
+            <Input id="paymentDueDay" name="paymentDueDay" type="number" min="1" max="28" step="1" defaultValue="1" required dir="ltr" />
+          </Field>
+        </div>
+        <Field htmlFor="notes" label={t("leases.notes")}>
+          <Textarea id="notes" name="notes" rows={3} />
+        </Field>
+        {units.length === 0 && <Alert tone="warning">{t("leases.noUnitsAvailable")}</Alert>}
+      </ActionForm>
+    </FormPage>
+  );
+}

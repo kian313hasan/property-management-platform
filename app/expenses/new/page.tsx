@@ -1,2 +1,67 @@
-import Link from "next/link"; import {auth} from "@/lib/auth"; import {prisma} from "@/lib/prisma"; import {redirect} from "next/navigation"; import {requireOrganizationContext} from "@/lib/authorization/organization"; import NewExpenseForm from "./new-expense-form";
-export default async function NewExpensePage(){const s=await auth();if(!s)redirect("/login");const context=await requireOrganizationContext();if(!["SUPER_ADMIN","PROPERTY_MANAGER","ACCOUNTANT"].includes(context.role))redirect("/expenses");const properties=await prisma.property.findMany({where:context.role==="PROPERTY_MANAGER"?{organizationId:context.organizationId,managerId:context.userId}:{organizationId:context.organizationId},include:{units:true},orderBy:{name:"asc"}});return <main className="min-h-screen bg-slate-50" dir="rtl"><div className="mx-auto max-w-2xl px-6 py-10"><Link href="/expenses" className="text-sm font-semibold text-slate-500">← العودة للمصروفات</Link><div className="mt-5 rounded-3xl border bg-white p-7 shadow-sm"><h1 className="text-2xl font-bold">إضافة مصروف</h1><NewExpenseForm properties={properties}/></div></div></main>}
+import { createExpense } from "@/actions/expenses";
+import { ActionForm } from "@/components/forms/action-form";
+import { FormPage } from "@/components/layout/form-page";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+import { propertyScope } from "@/lib/authorization/scope";
+import { prisma } from "@/lib/prisma";
+
+export default async function NewExpensePage() {
+  const context = await requirePageAccess("finance:manage", "/expenses");
+  const { t } = await getI18n();
+
+  const properties = await prisma.property.findMany({
+    where: propertyScope(context),
+    select: { id: true, name: true, units: { select: { id: true, unitNumber: true }, orderBy: { unitNumber: "asc" } } },
+    orderBy: { name: "asc" },
+  });
+
+  return (
+    <FormPage backHref="/expenses" backLabel={t("expenses.backToList")} title={t("expenses.newTitle")}>
+      <ActionForm action={createExpense} submitLabel={t("expenses.submit")} disabled={properties.length === 0}>
+        <Field htmlFor="propertyId" label={t("expenses.property")}>
+          <Select id="propertyId" name="propertyId" required>
+            {properties.map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field htmlFor="unitId" label={t("expenses.unitOptional")}>
+          <Select id="unitId" name="unitId" defaultValue="">
+            <option value="">{t("expenses.generalOnProperty")}</option>
+            {properties.flatMap((property) =>
+              property.units.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {property.name} — {unit.unitNumber}
+                </option>
+              )),
+            )}
+          </Select>
+        </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field htmlFor="category" label={t("expenses.category")}>
+            <Input id="category" name="category" required placeholder={t("expenses.categoryPlaceholder")} />
+          </Field>
+          <Field htmlFor="amount" label={t("expenses.amount")}>
+            <Input id="amount" name="amount" inputMode="decimal" required placeholder="500" dir="ltr" />
+          </Field>
+          <Field htmlFor="date" label={t("expenses.date")}>
+            <Input id="date" name="date" type="date" required dir="ltr" />
+          </Field>
+          <Field htmlFor="vendor" label={t("expenses.vendor")}>
+            <Input id="vendor" name="vendor" placeholder={t("expenses.vendorPlaceholder")} />
+          </Field>
+        </div>
+        <Field htmlFor="notes" label={t("expenses.notes")}>
+          <Textarea id="notes" name="notes" rows={3} />
+        </Field>
+      </ActionForm>
+    </FormPage>
+  );
+}

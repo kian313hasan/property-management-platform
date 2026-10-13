@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Arabic } from "next/font/google";
+import { I18nProvider } from "@/i18n/provider";
 import { getI18n } from "@/i18n/server";
 import "./globals.css";
 
@@ -34,7 +35,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       dir={dir}
       className={`${geistSans.variable} ${geistMono.variable} ${notoSansArabic.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <I18nProvider locale={locale}>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

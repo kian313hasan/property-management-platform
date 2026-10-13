@@ -1,25 +1,45 @@
-import Link from "next/link";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { requireOrganizationContext } from "@/lib/authorization/organization";
-import NewPropertyForm from "./new-property-form";
+import { createProperty } from "@/actions/properties";
+import { ActionForm } from "@/components/forms/action-form";
+import { FormPage } from "@/components/layout/form-page";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+
+const PROPERTY_TYPES = ["RESIDENTIAL", "COMMERCIAL", "MIXED", "OTHER"] as const;
 
 export default async function NewPropertyPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-  const context = await requireOrganizationContext();
-  if (context.role !== "SUPER_ADMIN" && context.role !== "PROPERTY_MANAGER") redirect("/properties");
+  await requirePageAccess("properties:manage", "/properties");
+  const { t } = await getI18n();
 
   return (
-    <main className="min-h-screen bg-slate-50" dir="rtl">
-      <div className="mx-auto max-w-2xl px-6 py-10">
-        <Link href="/properties" className="text-sm font-semibold text-slate-500">← العودة للعقارات</Link>
-        <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-          <h1 className="text-2xl font-bold">إضافة عقار جديد</h1>
-          <p className="mt-2 text-sm text-slate-500">أدخل البيانات الأساسية للعقار، ويمكن إضافة الوحدات لاحقاً.</p>
-          <NewPropertyForm />
+    <FormPage backHref="/properties" backLabel={t("properties.backToList")} title={t("properties.addTitle")} hint={t("properties.addHint")}>
+      <ActionForm action={createProperty} submitLabel={t("properties.submit")}>
+        <Field htmlFor="name" label={t("properties.name")}>
+          <Input id="name" name="name" required placeholder={t("properties.namePlaceholder")} />
+        </Field>
+        <Field htmlFor="address" label={t("properties.address")}>
+          <Input id="address" name="address" required placeholder={t("properties.addressPlaceholder")} />
+        </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field htmlFor="city" label={t("properties.city")}>
+            <Input id="city" name="city" required placeholder={t("properties.cityPlaceholder")} />
+          </Field>
+          <Field htmlFor="country" label={t("properties.country")}>
+            <Input id="country" name="country" required placeholder={t("properties.countryPlaceholder")} />
+          </Field>
         </div>
-      </div>
-    </main>
+        <Field htmlFor="type" label={t("properties.type")}>
+          <Select id="type" name="type" defaultValue="RESIDENTIAL">
+            {PROPERTY_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(`enums.propertyType.${type}`)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </ActionForm>
+    </FormPage>
   );
 }

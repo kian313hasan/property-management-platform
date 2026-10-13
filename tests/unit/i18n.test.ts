@@ -9,7 +9,7 @@ import {
   resolveLocale,
 } from "@/i18n/config";
 import { formatCurrency, formatDate, formatNumber } from "@/i18n/format";
-import { createTranslator, messages } from "@/i18n";
+import { createTranslator, isMessageKey, messages } from "@/i18n";
 
 function leafPaths(tree: unknown, prefix = ""): string[] {
   if (typeof tree !== "object" || tree === null) return [prefix];
@@ -81,5 +81,27 @@ describe("locale-aware formatting", () => {
       expect(text, locale).toContain("2026");
       expect(text, locale).not.toMatch(/[٠-٩۰-۹]/);
     }
+  });
+});
+
+describe("translator helpers", () => {
+  it("interpolates named placeholders and leaves unknown ones visible", () => {
+    const t = createTranslator("en");
+    expect(t("properties.unitTitle", { number: "12B" })).toBe("Unit 12B");
+    expect(t("properties.unitTitle")).toBe("Unit {number}");
+    expect(t("properties.unitTitle", { other: "x" })).toBe("Unit {number}");
+  });
+
+  it("translates placeholders in every locale", () => {
+    for (const locale of locales) {
+      expect(createTranslator(locale)("properties.unitTitle", { number: "7" }), locale).toContain("7");
+    }
+  });
+
+  it("recognises message keys and rejects arbitrary text", () => {
+    expect(isMessageKey("actionErrors.noPermission")).toBe(true);
+    expect(isMessageKey("not a key")).toBe(false);
+    expect(isMessageKey(undefined)).toBe(false);
+    expect(isMessageKey("actionErrors")).toBe(false);
   });
 });

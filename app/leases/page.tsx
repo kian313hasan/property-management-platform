@@ -1,3 +1,65 @@
-import Link from "next/link"; import {auth} from "@/lib/auth"; import {prisma} from "@/lib/prisma"; import {redirect} from "next/navigation"; import {requireOrganizationContext} from "@/lib/authorization/organization";
-const labels:Record<string,string>={ACTIVE:"نشط",DRAFT:"مسودة",EXPIRED:"منتهي",TERMINATED:"منهى"};
-export default async function LeasesPage(){const s=await auth();if(!s)redirect("/login");const context=await requireOrganizationContext();if(!["SUPER_ADMIN","PROPERTY_MANAGER"].includes(context.role))redirect("/dashboard");const leases=await prisma.lease.findMany({where:context.role==="PROPERTY_MANAGER"?{organizationId:context.organizationId,unit:{property:{managerId:s.user.id}}}:{organizationId:context.organizationId},include:{tenant:true,unit:{include:{property:true}}},orderBy:{createdAt:"desc"}});return <main className="min-h-screen bg-slate-50" dir="rtl"><header className="border-b bg-white"><div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4"><div><p className="text-xs font-semibold text-slate-400">PROPERTY MANAGEMENT PLATFORM</p><h1 className="text-xl font-bold">العقود</h1></div><div className="flex gap-3"><Link href="/dashboard" className="rounded-xl border px-4 py-2 text-sm font-semibold">لوحة التحكم</Link>{(context.role==="SUPER_ADMIN"||context.role==="PROPERTY_MANAGER")&&<Link href="/leases/new" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">+ عقد جديد</Link>}</div></div></header><div className="mx-auto max-w-7xl px-6 py-8">{leases.length===0?<div className="rounded-3xl border border-dashed bg-white p-12 text-center"><h2 className="text-xl font-bold">لا توجد عقود بعد</h2><Link href="/leases/new" className="mt-5 inline-block rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">إنشاء أول عقد</Link></div>:<div className="grid gap-5 lg:grid-cols-2">{leases.map(l=><article key={l.id} className="rounded-2xl border bg-white p-5 shadow-sm"><div className="flex justify-between"><div><h2 className="text-lg font-bold">{l.tenant.name}</h2><p className="mt-1 text-sm text-slate-500">{l.unit.property.name} — الوحدة {l.unit.unitNumber}</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{labels[l.status]}</span></div><div className="mt-5 grid grid-cols-2 gap-3 text-sm"><span>من: {l.startDate.toLocaleDateString("ar")}</span><span>إلى: {l.endDate.toLocaleDateString("ar")}</span><span>الإيجار: {l.rentAmount.toLocaleString()}</span><span>التأمين: {l.depositAmount?.toLocaleString()??"—"}</span></div></article>)}</div>}</div></main>}
+import Link from "next/link";
+import { AppShell } from "@/components/layout/app-shell";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/states";
+import { formatAmount, formatDate } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+import { leaseScope } from "@/lib/authorization/scope";
+import { prisma } from "@/lib/prisma";
+
+export default async function LeasesPage() {
+  const context = await requirePageAccess("properties:manage");
+  const { locale, t } = await getI18n();
+
+  const leases = await prisma.lease.findMany({
+    where: leaseScope(context),
+    include: { tenant: true, unit: { include: { property: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const addLink = (
+    <Link href="/leases/new" className={buttonVariants({ size: "sm" })}>
+      {t("leases.new")}
+    </Link>
+  );
+
+  return (
+    <AppShell role={context.role} active="/leases" title={t("leases.title")} actions={addLink}>
+      {leases.length === 0 ? (
+        <EmptyState
+          title={t("leases.emptyTitle")}
+          action={
+            <Link href="/leases/new" className={buttonVariants()}>
+              {t("leases.createFirst")}
+            </Link>
+          }
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {leases.map((lease) => (
+            <Card key={lease.id}>
+              <CardContent>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold">{lease.tenant.name}</h2>
+                    <p className="mt-1 text-sm text-fg-muted">{t("leases.unitOption", { property: lease.unit.property.name, unit: lease.unit.unitNumber })}</p>
+                  </div>
+                  <Badge tone={lease.status === "ACTIVE" ? "success" : "neutral"}>{t(`enums.leaseStatus.${lease.status}`)}</Badge>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-fg-muted">
+                  <span>{t("leases.from", { date: formatDate(locale, lease.startDate) })}</span>
+                  <span>{t("leases.to", { date: formatDate(locale, lease.endDate) })}</span>
+                  <span>{t("leases.rentLabel", { value: formatAmount(locale, lease.rentAmount) })}</span>
+                  <span>{t("leases.depositLabel", { value: lease.depositAmount ? formatAmount(locale, lease.depositAmount) : t("common.none") })}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </AppShell>
+  );
+}

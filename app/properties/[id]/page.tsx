@@ -1,4 +1,76 @@
 import Link from "next/link";
-import {auth} from "@/lib/auth"; import {prisma} from "@/lib/prisma"; import {notFound,redirect} from "next/navigation"; import {requireOrganizationContext} from "@/lib/authorization/organization";
-const labels:Record<string,string>={AVAILABLE:"متاحة",OCCUPIED:"مشغولة",MAINTENANCE:"صيانة",INACTIVE:"غير فعالة"};
-export default async function PropertyPage({params}:{params:Promise<{id:string}>}){const s=await auth();if(!s)redirect("/login");const context=await requireOrganizationContext();if(context.role!=="SUPER_ADMIN"&&context.role!=="PROPERTY_MANAGER")redirect("/dashboard");const{id}=await params;const p=await prisma.property.findFirst({where:{id,organizationId:context.organizationId},include:{units:{orderBy:{unitNumber:"asc"}},_count:{select:{units:true}}}});if(!p)notFound();if(context.role==="PROPERTY_MANAGER"&&p.managerId!==context.userId)redirect("/properties");return <main className="min-h-screen bg-slate-50" dir="rtl"><header className="border-b bg-white"><div className="mx-auto max-w-7xl px-6 py-4"><Link href="/properties" className="text-sm font-semibold text-slate-500">← العودة للعقارات</Link></div></header><div className="mx-auto max-w-7xl px-6 py-8"><section className="mb-7 rounded-3xl bg-slate-900 p-7 text-white"><p className="text-sm text-slate-300">{p.city}، {p.country}</p><h1 className="mt-2 text-3xl font-bold">{p.name}</h1><p className="mt-2 text-sm text-slate-300">{p.address}</p></section><div className="mb-5 flex items-center justify-between"><h2 className="text-2xl font-bold">الوحدات ({p._count.units})</h2>{(context.role==="SUPER_ADMIN"||context.role==="PROPERTY_MANAGER")&&<Link href={"/properties/"+id+"/units/new"} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">+ إضافة وحدة</Link>}</div>{p.units.length===0?<div className="rounded-2xl border border-dashed bg-white p-10 text-center text-slate-500">لا توجد وحدات في هذا العقار بعد.</div>:<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{p.units.map(u=><article key={u.id} className="rounded-2xl border bg-white p-5 shadow-sm"><div className="flex justify-between"><h3 className="text-lg font-bold">الوحدة {u.unitNumber}</h3><span className="text-xs font-semibold text-emerald-600">{labels[u.status]}</span></div><div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-500"><span>الطابق: {u.floor??"—"}</span><span>غرف: {u.bedrooms??"—"}</span><span>حمامات: {u.bathrooms??"—"}</span><span>المساحة: {u.area?u.area+" م²":"—"}</span></div><p className="mt-5 text-xl font-bold">{u.rentAmount.toLocaleString()} <span className="text-sm font-normal text-slate-500">شهرياً</span></p></article>)}</div>}</div></main>}
+import { notFound } from "next/navigation";
+import { AppShell } from "@/components/layout/app-shell";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/states";
+import { formatAmount, formatNumber } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+import { propertyScope } from "@/lib/authorization/scope";
+import { prisma } from "@/lib/prisma";
+
+export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
+  const context = await requirePageAccess("properties:manage");
+  const { locale, t } = await getI18n();
+  const { id } = await params;
+
+  // A foreign or unmanaged id is indistinguishable from a missing one (no existence leak).
+  const property = await prisma.property.findFirst({
+    where: { id, ...propertyScope(context) },
+    include: { units: { orderBy: { unitNumber: "asc" } } },
+  });
+  if (!property) notFound();
+
+  const addUnit = (
+    <Link href={`/properties/${property.id}/units/new`} className={buttonVariants({ size: "sm" })}>
+      {t("properties.addUnit")}
+    </Link>
+  );
+  const dash = t("common.none");
+
+  return (
+    <AppShell role={context.role} active="/properties" title={property.name} actions={addUnit}>
+      <Link href="/properties" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted hover:underline">
+        <span aria-hidden="true" className="rtl:rotate-180">
+          ←
+        </span>
+        {t("properties.backToList")}
+      </Link>
+      <section className="mb-7 rounded-3xl bg-primary p-7 text-primary-fg">
+        <p className="text-sm opacity-80">
+          {property.city}, {property.country}
+        </p>
+        <h2 className="mt-2 text-3xl font-bold">{property.name}</h2>
+        <p className="mt-2 text-sm opacity-80">{property.address}</p>
+      </section>
+      <h2 className="mb-5 text-2xl font-bold">{t("properties.units", { count: formatNumber(locale, property.units.length) })}</h2>
+      {property.units.length === 0 ? (
+        <EmptyState title={t("properties.noUnits")} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {property.units.map((unit) => (
+            <Card key={unit.id}>
+              <CardContent>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-bold">{t("properties.unitTitle", { number: unit.unitNumber })}</h3>
+                  <Badge tone={unit.status === "AVAILABLE" ? "success" : "neutral"}>{t(`enums.unitStatus.${unit.status}`)}</Badge>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-fg-muted">
+                  <span>{t("properties.floor", { value: unit.floor === null ? dash : formatNumber(locale, unit.floor) })}</span>
+                  <span>{t("properties.bedrooms", { value: unit.bedrooms === null ? dash : formatNumber(locale, unit.bedrooms) })}</span>
+                  <span>{t("properties.bathrooms", { value: unit.bathrooms === null ? dash : formatNumber(locale, unit.bathrooms) })}</span>
+                  <span>{t("properties.area", { value: unit.area === null ? dash : formatNumber(locale, unit.area) })}</span>
+                </div>
+                <p className="mt-5 text-xl font-bold">
+                  {formatAmount(locale, unit.rentAmount)} <span className="text-sm font-normal text-fg-muted">{t("properties.perMonth")}</span>
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </AppShell>
+  );
+}

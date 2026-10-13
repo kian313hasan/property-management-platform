@@ -19,14 +19,23 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 export const passwordSchema = z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH);
 
-/** Positive decimal money value with at most two fraction digits (matches Decimal(18, 2)). */
-export const moneySchema = z.coerce
-  .number()
-  .positive()
-  .max(1_000_000_000_000)
-  .refine((value) => Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-6, {
-    message: "Money values allow at most two decimal places.",
-  });
+const MONEY_PATTERN = /^(0|[1-9]\d{0,11})(\.\d{1,2})?$/;
+
+/**
+ * Money is validated and kept as a decimal *string* (matches Decimal(18, 2)); it is never converted to a
+ * JavaScript float. Prisma accepts the string for Decimal columns, so no rounding error can occur.
+ * `message` is the error text (an i18n key in server actions). With `allowZero` the value may be 0.
+ */
+export function moneyField(message: string, options: { allowZero?: boolean } = {}) {
+  return z
+    .string()
+    .trim()
+    .regex(MONEY_PATTERN, message)
+    .refine((value) => options.allowZero || Number(value) > 0, message);
+}
+
+/** Strictly positive money, e.g. a rent or payment amount. */
+export const moneySchema = moneyField("Money values must be positive with at most two decimal places.");
 
 /** ISO calendar date (YYYY-MM-DD) as produced by <input type="date">. */
 export const isoDateSchema = z

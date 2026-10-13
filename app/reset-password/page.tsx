@@ -15,7 +15,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
   const hasToken = typeof token === "string" && token.length > 0;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6" dir="rtl">
+    <main className="flex min-h-screen items-center justify-center bg-surface-muted px-6">
       <section className="w-full max-w-md rounded-3xl border bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold">تعيين كلمة مرور جديدة</h1>
         <p className="mt-2 text-sm text-slate-500">

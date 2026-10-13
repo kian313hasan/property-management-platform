@@ -1,2 +1,61 @@
-import Link from "next/link"; import {auth} from "@/lib/auth"; import {prisma} from "@/lib/prisma"; import {redirect} from "next/navigation"; import {requireOrganizationContext} from "@/lib/authorization/organization";
-export default async function TenantsPage(){const s=await auth();if(!s)redirect("/login");const context=await requireOrganizationContext();if(!["SUPER_ADMIN","PROPERTY_MANAGER"].includes(context.role))redirect("/dashboard");const tenants=await prisma.tenant.findMany({where:context.role==="PROPERTY_MANAGER"?{organizationId:context.organizationId,OR:[{leases:{none:{organizationId:context.organizationId}}},{leases:{some:{organizationId:context.organizationId,unit:{property:{managerId:context.userId}}}}}]}:{organizationId:context.organizationId},include:{_count:{select:{leases:true}}},orderBy:{createdAt:"desc"}});return <main className="min-h-screen bg-slate-50" dir="rtl"><header className="border-b bg-white"><div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4"><div><p className="text-xs font-semibold text-slate-400">PROPERTY MANAGEMENT PLATFORM</p><h1 className="text-xl font-bold">المستأجرون</h1></div><div className="flex gap-3"><Link href="/dashboard" className="rounded-xl border px-4 py-2 text-sm font-semibold">لوحة التحكم</Link><Link href="/tenants/new" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">+ إضافة مستأجر</Link></div></div></header><div className="mx-auto max-w-7xl px-6 py-8">{tenants.length===0?<div className="rounded-3xl border border-dashed bg-white p-12 text-center"><h2 className="text-xl font-bold">لا يوجد مستأجرون بعد</h2><Link href="/tenants/new" className="mt-5 inline-block rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">إضافة أول مستأجر</Link></div>:<div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{tenants.map(t=><article key={t.id} className="rounded-2xl border bg-white p-5 shadow-sm"><h2 className="text-lg font-bold">{t.name}</h2><p className="mt-2 text-sm text-slate-500">{t.email||"بدون بريد إلكتروني"}</p><p className="mt-1 text-sm text-slate-500">{t.phone||"بدون هاتف"}</p><div className="mt-5 border-t pt-4 text-sm text-slate-500">العقود: {t._count.leases}</div></article>)}</div>}</div></main>}
+import Link from "next/link";
+import { AppShell } from "@/components/layout/app-shell";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/states";
+import { formatNumber } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+import { tenantScope } from "@/lib/authorization/scope";
+import { prisma } from "@/lib/prisma";
+
+export default async function TenantsPage() {
+  const context = await requirePageAccess("properties:manage");
+  const { locale, t } = await getI18n();
+
+  const tenants = await prisma.tenant.findMany({
+    where: tenantScope(context),
+    include: { _count: { select: { leases: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const addLink = (
+    <Link href="/tenants/new" className={buttonVariants({ size: "sm" })}>
+      {t("tenants.add")}
+    </Link>
+  );
+
+  return (
+    <AppShell role={context.role} active="/tenants" title={t("tenants.title")} actions={addLink}>
+      {tenants.length === 0 ? (
+        <EmptyState
+          title={t("tenants.emptyTitle")}
+          action={
+            <Link href="/tenants/new" className={buttonVariants()}>
+              {t("tenants.addFirst")}
+            </Link>
+          }
+        />
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {tenants.map((tenant) => (
+            <Card key={tenant.id}>
+              <CardContent>
+                <h2 className="text-lg font-bold">{tenant.name}</h2>
+                <p className="mt-2 text-sm text-fg-muted" dir="auto">
+                  {tenant.email ?? t("tenants.noEmail")}
+                </p>
+                <p className="mt-1 text-sm text-fg-muted" dir="auto">
+                  {tenant.phone ?? t("tenants.noPhone")}
+                </p>
+                <div className="mt-5 border-t border-border pt-4 text-sm text-fg-muted">
+                  {t("tenants.leasesCount", { count: formatNumber(locale, tenant._count.leases) })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </AppShell>
+  );
+}
