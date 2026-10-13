@@ -32,8 +32,9 @@ describe("UI conventions", () => {
     expect(keys.filter((key) => !isMessageKey(key))).toEqual([]);
   });
 
-  it("does not convert money to floating point in server actions", () => {
-    const offenders = sourceFiles("actions").filter((file) => /amount|rent|deposit|cost/i.test(readFileSync(path.join(root, file), "utf8")) && /Number\(|parseFloat|toNumber\(|z\.coerce\.number\(\)\.(positive|min)\(0?\)?[^;]*(amount|rent|cost)/i.test(readFileSync(path.join(root, file), "utf8")));
+  it("does not convert values to floating point in server actions (money stays a decimal string)", () => {
+    const offenders = sourceFiles("actions").filter((file) => /\b(Number|parseFloat|parseInt)\(|\.toNumber\(/.test(readFileSync(path.join(root, file), "utf8")));
     expect(offenders).toEqual([]);
   });
+});
 });
