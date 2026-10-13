@@ -62,15 +62,22 @@ Decision: JWT session strategy; authorization re-reads the membership role from 
 Alternatives: database sessions; custom session store.
 Reason: avoids trusting a role cached in the token. Consequence: `Session` table is unused, and JWTs cannot be revoked server-side before expiry (accepted risk, see docs/STATUS.md).
 
-## ADR-010: Locale formatting choices (needs product confirmation)
+## ADR-010: Locale formatting: Western digits and Gregorian calendar everywhere
 Context: Arabic and Persian users differ in expected digits and calendar.
-Decision: Arabic uses Western digits (`ar-u-nu-latn`); Persian uses `fa-IR` (Persian digits, Jalali calendar); English uses `en-US`. Locale comes from cookie, then Accept-Language, then `en`. No locale in the URL.
-Alternatives: next-intl with locale routing; Arabic-Indic digits.
-Reason: minimal dependencies for the foundation; see ADR-005.
-Consequences: these defaults must be confirmed by the product owner; locale-prefixed URLs would need a new ADR.
+Decision (confirmed by the product owner, 2026-10-13): all locales use Western digits (0-9) and the Gregorian calendar, forced through the `-u-ca-gregory-nu-latn` Intl extension. Locale comes from cookie, then Accept-Language, then `en`. No locale in the URL.
+Alternatives: Persian digits and Jalali calendar for fa; Arabic-Indic digits for ar; next-intl with locale routing.
+Reason: consistent figures across locales for the university delivery; minimal dependencies (ADR-005).
+Consequences: a Jalali/Persian-digit option would need a new ADR; locale-prefixed URLs likewise.
 
 ## ADR-011: Custom UI primitives instead of the shadcn/ui CLI
 Context: the brief names shadcn/ui and React Hook Form.
-Decision: `components/ui/*` are hand-written primitives (cva + tailwind-merge) in the shadcn style. React Hook Form is declared but not yet used; forms use `useActionState`.
+Decision: `components/ui/*` are hand-written primitives (cva + tailwind-merge) in the shadcn style. Forms use `useActionState`. React Hook Form was removed from dependencies on 2026-10-13 because it was unused (confirmed by the product owner); it can be re-added with a reason if complex client-side forms appear.
 Reason: no generated code was pulled in during the foundation phase.
-Consequences: either adopt React Hook Form for complex forms or remove the dependency (open item in docs/STATUS.md).
+Consequences: hand-written primitives are maintained in-repo.
+
+## ADR-012: Fully local operation (no external services)
+Context: the project is delivered for university review and must run 100% locally.
+Decision (confirmed 2026-10-13): no external email or storage provider is integrated. Password-reset links are printed to the server console outside production (`lib/mail/local-mailer.ts`); in production nothing is printed and a warning records the missing provider. If file storage is needed it will use a private local directory behind the same adapter boundary, with allowlists, size limits and generated keys (not yet implemented).
+Alternatives: SMTP/SaaS email; S3-compatible storage.
+Reason: no accounts, keys or network are required to demo the project.
+Consequences: password reset is a development-only flow; a real provider needs a new ADR. `STORAGE_*`, `EMAIL_*` and `SENTRY_DSN` env variables stay optional and unused.

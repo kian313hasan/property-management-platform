@@ -12,8 +12,8 @@ Organization-scoped schema with composite FKs and Decimal money; Auth.js credent
 4. **No per-action tests:** no IDOR/cross-tenant tests at the action level, no authorization-by-role tests for actions, no API security tests, E2E has one smoke test.
 5. **Audit coverage:** only auth, role-change and password-reset events are recorded; create/update/delete of business resources are not. Audit log immutability is not enforced.
 6. **i18n not applied to pages:** most pages and every server-action error message are hard-coded Arabic with `dir="rtl"`. English/Persian users see Arabic.
-7. **Design system not applied:** pages bypass `components/ui`. React Hook Form is declared but unused.
-8. **Password reset has no email delivery**; no email or storage adapter exists (env variables are reserved only).
+7. **Design system not applied:** pages bypass `components/ui`. (React Hook Form was removed, ADR-011.)
+8. **Email/storage are local-only by decision (ADR-012):** the reset link is printed to the console outside production; there is no file storage yet.
 9. **File management, notifications, reports** have no schema, no architecture code and no docs beyond env placeholders.
 10. **Money input** in actions uses `z.coerce.number()` instead of `moneySchema` and converts via floating point.
 11. **CSP** allows `unsafe-inline`; no nonce. JWT sessions cannot be revoked. No MFA.
@@ -21,10 +21,9 @@ Organization-scoped schema with composite FKs and Decimal money; Auth.js credent
 13. `MaintenanceRequest.priority/status` are strings, not enums; `Tenant.nationalId` is plain text.
 14. A full attacker-style security review (phase 19) has not been performed.
 
-## Decisions awaiting confirmation
-1. Digit and calendar choices for ar/fa (ADR-010).
-2. Whether to keep custom UI primitives or adopt the shadcn CLI, and keep or drop React Hook Form (ADR-011).
-3. Whether "Building" must be a separate level between Property and Unit.
-4. Per-organization custom roles (would change ADR-007).
-5. Which email and object-storage providers to use.
-6. Multi-organization users: the active organization is chosen by a cookie validated against memberships; confirm this is the desired UX.
+## Decisions confirmed (2026-10-13)
+Property -> Unit hierarchy stays (no Building level); Western digits and Gregorian calendar for all locales (ADR-010); custom UI primitives kept, react-hook-form removed (ADR-011); no external services, local operation only (ADR-012).
+
+## Decisions still open
+1. Per-organization custom roles (would change ADR-007).
+2. Multi-organization users: the active organization is chosen by a cookie validated against memberships; confirm this is the desired UX.
