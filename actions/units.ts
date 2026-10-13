@@ -11,7 +11,7 @@ import { propertyScope } from "@/lib/authorization/scope";
 import { moneyField } from "@/lib/validation/common";
 import { validationErrorKey, type ActionState } from "./types";
 
-const optionalNumber = (schema: z.ZodNumber) => z.preprocess((value) => (value === "" || value === null ? undefined : value), schema.optional());
+const optionalNumber = <T extends z.ZodType>(schema: T) => z.preprocess((value) => (value === "" || value === null ? undefined : value), schema.optional());
 
 const unitSchema = z.object({
   unitNumber: z.string().trim().min(1, "actionErrors.unitNumberRequired").max(32),
