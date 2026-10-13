@@ -70,11 +70,16 @@ describe("locale-aware formatting", () => {
   it("formats numbers and currency per locale", () => {
     expect(formatNumber("en", 1234567.5)).toBe("1,234,567.5");
     expect(formatCurrency("en", 10, "USD")).toBe("$10.00");
-    expect(formatNumber("fa", 123)).toMatch(/[۰-۹]/);
+    for (const locale of locales) expect(formatNumber(locale, 1234)).toMatch(/^[0-9]/);
+    expect(formatNumber("fa", 123)).toBe("123");
     expect(formatNumber("ar", 123)).toBe("123");
   });
 
-  it("formats dates without throwing for every locale", () => {
-    for (const locale of locales) expect(formatDate(locale, sample).length).toBeGreaterThan(0);
+  it("formats dates with Western digits and the Gregorian year for every locale", () => {
+    for (const locale of locales) {
+      const text = formatDate(locale, sample, { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" });
+      expect(text, locale).toContain("2026");
+      expect(text, locale).not.toMatch(/[٠-٩۰-۹]/);
+    }
   });
 });

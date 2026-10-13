@@ -1,11 +1,12 @@
 import type { Locale } from "./config";
 
 /**
- * BCP 47 tags handed to Intl. Arabic keeps Western digits (`-u-nu-latn`) because that is the common
- * convention in business software; Persian uses Persian digits and the Jalali calendar that `fa-IR`
- * defaults to. These two choices need product confirmation (docs/DECISIONS.md, ADR-010).
+ * BCP 47 tags handed to Intl. Product decision (ADR-010): every locale uses Western digits (0-9)
+ * and the Gregorian calendar, set explicitly so a browser or Node default (e.g. Jalali for fa-IR)
+ * cannot change the output.
  */
-const INTL_LOCALE: Record<Locale, string> = { ar: "ar-u-nu-latn", en: "en-US", fa: "fa-IR" };
+const UNICODE_EXT = "-u-ca-gregory-nu-latn";
+const INTL_LOCALE: Record<Locale, string> = { ar: `ar${UNICODE_EXT}`, en: `en-US${UNICODE_EXT}`, fa: `fa-IR${UNICODE_EXT}` };
 
 export function formatNumber(locale: Locale, value: number, options?: Intl.NumberFormatOptions): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], options).format(value);
