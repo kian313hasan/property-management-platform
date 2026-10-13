@@ -15,6 +15,7 @@ export const ar: Messages = {
     back: "رجوع",
     none: "—",
     appTagline: "منصة إدارة العقارات",
+    appDescription: "منصة احترافية لإدارة العقارات تدعم عدة مؤسسات.",
   },
   nav: {
     dashboard: "لوحة التحكم",

@@ -20,10 +20,11 @@ const notoSansArabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
 });
 
-export const metadata: Metadata = {
-  title: "Property Management Platform",
-  description: "Professional multi-tenant property management platform.",
-};
+/** Title and description follow the resolved locale (cookie, then Accept-Language). */
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("common.appName"), description: t("common.appDescription") };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // The document language and direction follow the resolved locale (cookie, then Accept-Language).
