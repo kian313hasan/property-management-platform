@@ -6,16 +6,16 @@ Honest state of the foundation phase. Update this file whenever a gap is closed 
 Organization-scoped schema with composite FKs and Decimal money; Auth.js credentials login with rate limiting; password-reset token logic; closed registration; permission matrix; safe error mapping; structured logger with redaction; env schema validation; audit service (auth + role changes); i18n (ar/en/fa) with RTL/LTR layout and Intl formatting; UI primitives; Docker + compose; CI (lint, typecheck, tests, build, audit, CodeQL, dependency review); docs.
 
 ## Not done / open
-1. **Merge:** all work is on `foundation-completion` (PR #1) and still has to be merged into `main`.
+1. **Merge:** work in progress is on branch `ui-i18n-money` (PR #12); earlier work was merged via PR #1.
 2. **Lockfile out of sync** with package.json (see Dockerfile comment). CI and Docker use `npm install`; switch to `npm ci` after regenerating `package-lock.json` with network access.
 3. **Authorization partly centralised:** server actions now use `hasPermission` (done) and `propertyScope`; pages (e.g. dashboard, lists) still hard-code role arrays and should move to the same helpers.
 4. **Tests:** IDOR scoping is tested at query level (`idor.integration.test.ts`); there are still no tests that invoke server actions as each role, no API security tests, and E2E has one smoke test.
 5. **Audit coverage:** create events for business resources and users are now recorded; there are no update/delete flows yet. Audit log immutability is still not enforced.
-6. **i18n not applied to pages:** most pages and every server-action error message are hard-coded Arabic with `dir="rtl"`. English/Persian users see Arabic.
-7. **Design system not applied:** pages bypass `components/ui`. (React Hook Form was removed, ADR-011.)
+6. **i18n:** pages, forms, error pages and server-action errors now use `t()` / translation keys (`actionErrors.*`); `tests/unit/ui-conventions.test.ts` fails if Arabic/Persian text, `dir="rtl"` or `toLocale*String` reappear in `app/`, `actions/`, `components/` or `lib/`. Known remaining: the site-wide `<title>`/description in `app/layout.tsx` are fixed English strings; the Auth.js sign-in error messages are mapped through `auth.errors.*` only.
+7. **Design system:** every page now uses `AppShell`, `FormPage`, `ActionForm` and `components/ui`; the login page keeps its dark backdrop by design. No accessibility audit or visual regression tests yet.
 8. **Email/storage are local-only by decision (ADR-012):** the reset link is printed to the console outside production; there is no file storage yet.
 9. **File management, notifications, reports** have no schema, no architecture code and no docs beyond env placeholders.
-10. **Money input** in actions uses `z.coerce.number()` instead of `moneySchema` and converts via floating point.
+10. **Money:** inputs are validated with `moneyField` and passed to Prisma as decimal strings; totals are summed in the database. A unit test forbids `Number()`/`parseFloat()`/`toNumber()` in server actions. `formatAmount` converts to a JS number only for display.
 11. **CSP** allows `unsafe-inline`; no nonce. JWT sessions cannot be revoked. No MFA.
 12. **CI hardening:** actions are pinned by tag, not commit SHA; required-check/branch-protection settings are GitHub settings and cannot be verified from the repo.
 13. `MaintenanceRequest.priority/status` are strings, not enums; `Tenant.nationalId` is plain text.

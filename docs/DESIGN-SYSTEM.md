@@ -12,5 +12,5 @@ Tokens live in `app/globals.css` (Tailwind v4 `@theme`). Primitives in `componen
 - Dialogs trap focus and close on Escape; verify this when changing `dialog.tsx`.
 
 ## Not done
-- Existing pages (`app/**`) still use inline Tailwind classes instead of these primitives (only 2 files import `components/ui`).
-- No accessibility audit, no visual regression tests, no dark-mode decision.
+- Page frames: `components/layout/app-shell.tsx` (authenticated pages) and `form-page.tsx` (create forms); `components/forms/action-form.tsx` renders translated action errors.
+- No accessibility audit, no visual regression tests, no dark-mode decision. Pages have not been checked in a real browser in this environment; only CI (lint, typecheck, unit/integration/E2E smoke) has run.
