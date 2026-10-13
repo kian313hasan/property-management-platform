@@ -28,13 +28,17 @@ Authentication answers who are you? Authorization answers may this identity perf
 app/ contains routes and page composition. Reusable UI belongs in components/. Translation resources belong in i18n/. Domain/business logic must not be embedded in presentational components.
 
 ## Backend architecture
-- lib/auth: authentication configuration.
-- lib/authorization: policy checks and organization context.
-- lib/validation: Zod schemas.
-- lib/errors: safe application errors.
-- lib/logging: structured logging.
-- lib/db: Prisma access.
-- app/api: HTTP API boundary.
+- lib/auth.ts, lib/auth.config.ts: Auth.js configuration (JWT sessions, credentials provider).
+- lib/authorization: permission matrix (`permissions.ts`), policy helpers (`policy.ts`), organization context (`organization.ts`).
+- lib/validation: Zod schemas shared by actions and routes.
+- lib/errors: `AppError` and safe HTTP error mapping.
+- lib/logging: structured JSON logger with redaction.
+- lib/audit: audit event recording.
+- lib/security: rate limiting, password reset, client IP helpers.
+- lib/config: environment schema and validation.
+- lib/prisma.ts: the single Prisma client (there is no `lib/db/` directory).
+- actions/: server actions (the current write boundary). app/api/: only the Auth.js route today.
+- proxy.ts: coarse authentication gate (not an authorization boundary).
 
 ## Security boundaries
 Trusted: server session, server-derived organization membership, validated server-side inputs.
@@ -42,3 +46,6 @@ Untrusted: all browser fields, route params, query params, uploaded files, and u
 
 ## Folder structure
 See docs/DEVELOPMENT.md for the canonical structure and dependency rules.
+
+## Known deviations from the target architecture
+Pages and server actions still contain role checks (`["SUPER_ADMIN","PROPERTY_MANAGER"].includes(role)`) and Prisma queries inline, and user-facing strings are hard-coded in Arabic with `dir="rtl"` in most pages. The target is: permission checks through `requireRolePermission`, data access in a service layer, text through `t()` from `i18n/`. See docs/STATUS.md for the list.

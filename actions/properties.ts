@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/authorization/organization";
+import { auditResourceChange } from "@/lib/audit/resource";
+import { hasPermission } from "@/lib/authorization/permissions";
 
 const propertySchema = z.object({
   name: z.string().trim().min(2, "اسم العقار مطلوب"),
@@ -14,11 +16,9 @@ const propertySchema = z.object({
   type: z.enum(["RESIDENTIAL", "COMMERCIAL", "MIXED", "OTHER"]),
 });
 
-const canManageProperties = new Set(["SUPER_ADMIN", "PROPERTY_MANAGER"]);
-
 export async function createProperty(formData: FormData) {
   const context = await requireOrganizationContext();
-  if (!canManageProperties.has(context.role)) return { error: "ليس لديك صلاحية إضافة عقار." };
+  if (!hasPermission(context.role, "properties:manage")) return { error: "ليس لديك صلاحية إضافة عقار." };
 
   const parsed = propertySchema.safeParse({
     name: formData.get("name"),
@@ -30,7 +30,7 @@ export async function createProperty(formData: FormData) {
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "تحقق من البيانات." };
 
-  await prisma.property.create({
+  const created = await prisma.property.create({
     data: {
       ...parsed.data,
       organizationId: context.organizationId,
@@ -38,7 +38,8 @@ export async function createProperty(formData: FormData) {
     },
   });
 
-  revalidatePath("/properties");
+  await auditResourceChange(context, "RESOURCE_CREATED", "Property", created.id);
+revalidatePath("/properties");
   revalidatePath("/dashboard");
   redirect("/properties");
 }

@@ -24,5 +24,16 @@ Use PostgreSQL foreign keys, unique constraints, indexes, and transactions. Mone
 ## Migration policy
 Every schema change requires a committed Prisma migration. Never edit a production database manually and never silently rewrite migration history.
 
-## Current-state note
-The repository still contains the earlier SQLite-oriented business schema. This foundation phase establishes the PostgreSQL target and tenancy model, but the existing business tables are not yet fully migrated to organization ownership. That migration is a required gate before business features are declared production-ready.
+## Current state
+- All business tables (Property, Unit, Tenant, Lease, Payment, Expense, MaintenanceRequest) carry a mandatory `organizationId`; money columns are `Decimal(18,2)`. See ADR-006 and the migrations in `prisma/migrations/`.
+- Cross-entity relations use composite foreign keys `(id, organizationId)`, so a child cannot reference a parent of another organization even if application code is wrong (covered by `tests/integration/tenant-isolation.integration.test.ts`).
+- `Permission` / `RolePermission` tables exist, but the **source of truth for grants is `lib/authorization/permissions.ts`**; the tables are not seeded or read at runtime (see docs/STATUS.md and ADR-007).
+- `PasswordResetToken` stores only a SHA-256 hash of the token; `LoginRateLimit` backs persistent rate limiting.
+
+## Known gaps (not implemented)
+- `AuditLog` is append-only by convention only. There is no database trigger or restricted role preventing UPDATE/DELETE. A naive trigger would break the `ON DELETE SET NULL` foreign keys, so it needs a deliberate design (ADR required).
+- `MaintenanceRequest.priority` and `status` are free `String` columns; they should become enums via a migration.
+- No `File`, `Notification` or `Building` model. "Building" is currently represented by `Property`; confirm whether a separate level is wanted (docs/STATUS.md, decision 3).
+- `Tenant.nationalId` is stored in plain text; decide on field-level encryption before real data is stored.
+- `User.role` duplicates `OrganizationMember.role` (transitional; the membership role is authoritative). `User.email` is globally unique, so one email belongs to one user across organizations.
+- No Row Level Security. Isolation relies on organization-scoped queries plus composite foreign keys.

@@ -5,10 +5,19 @@ const WINDOW_MS = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const BLOCK_MS = 15 * 60 * 1000;
 
-function keyHash(kind: "email" | "ip", value: string): string {
+/** Independent counters per protected flow. "login" keeps its original key derivation. */
+type RateLimitScope = "login" | "password-reset";
+
+function keyHash(kind: "email" | "ip", value: string, scope: RateLimitScope = "login"): string {
   return createHash("sha256")
-    .update(`login:${kind}:${value.trim().toLowerCase()}`)
+    .update(`${scope}:${kind}:${value.trim().toLowerCase()}`)
     .digest("hex");
+}
+
+function keysFor(scope: RateLimitScope, email: string, ip?: string): string[] {
+  const keys = [keyHash("email", email, scope)];
+  if (ip) keys.push(keyHash("ip", ip, scope));
+  return keys;
 }
 
 async function consume(key: string): Promise<boolean> {
@@ -43,16 +52,18 @@ async function consume(key: string): Promise<boolean> {
   return Boolean(row?.blockedUntil && row.blockedUntil > now) || (row?.attempts ?? 0) > MAX_ATTEMPTS;
 }
 
+/** Counts a login attempt and reports whether the caller is now rate limited. */
 export async function checkLoginRateLimit(email: string, ip?: string): Promise<boolean> {
-  const keys = [keyHash("email", email)];
-  if (ip) keys.push(keyHash("ip", ip));
+  const blocked = await Promise.all(keysFor("login", email, ip).map(consume));
+  return blocked.some(Boolean);
+}
 
-  const blocked = await Promise.all(keys.map(consume));
+/** Counts a password-reset request and reports whether the caller is now rate limited. */
+export async function checkPasswordResetRateLimit(email: string, ip?: string): Promise<boolean> {
+  const blocked = await Promise.all(keysFor("password-reset", email, ip).map(consume));
   return blocked.some(Boolean);
 }
 
 export async function clearLoginRateLimit(email: string, ip?: string): Promise<void> {
-  const keys = [keyHash("email", email)];
-  if (ip) keys.push(keyHash("ip", ip));
-  await prisma.loginRateLimit.deleteMany({ where: { key: { in: keys } } });
+  await prisma.loginRateLimit.deleteMany({ where: { key: { in: keysFor("login", email, ip) } } });
 }

@@ -5,9 +5,18 @@ on:
   push:
     branches: [main]
 
+# Least privilege: the workflow only needs to read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -36,7 +45,12 @@ jobs:
       - run: npm install
       - run: npx prisma generate
       - run: npx prisma migrate deploy
-      - run: npm run lint
+      - name: Lint
+        run: |
+          # Surface ESLint errors as annotations so they are readable from the checks API.
+          npx eslint -f json -o eslint-report.json || true
+          node -e "const r=require('./eslint-report.json');for(const f of r)for(const m of f.messages)if(m.severity===2)console.log('::error file='+f.filePath.replace(process.cwd()+'/','')+',line='+m.line+'::'+m.ruleId+': '+m.message)"
+          npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:integration
@@ -47,6 +61,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: quality
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/property_management?schema=public

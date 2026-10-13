@@ -1,92 +1,40 @@
-'use server';
+"use server";
 
-import { z } from 'zod';
-import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
-import { signIn } from '@/lib/auth';
+import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
+import { signIn } from "@/lib/auth";
+import { logger, serializeError } from "@/lib/logging/logger";
+import { loginSchema } from "@/lib/validation/auth";
 
-const registerSchema = z.object({
-  email: z.string().email('?????? ?????????? ??? ????'),
-  password: z.string().min(8, '???? ?????? ??? ?? ???? 8 ???? ??? ?????'),
-  name: z.string().min(2, '????? ??? ?? ???? ????? ??? ?????'),
-});
+/** Machine-readable outcome; the UI maps it to a translated message (see i18n/messages). */
+export type LoginError = "invalid_input" | "invalid_credentials" | "unexpected";
+export type LoginState = { error?: LoginError };
 
-export async function register(formData: FormData, options?: { requireSuperAdmin?: boolean }) {
-  if (!options?.requireSuperAdmin) {
-    return { error: "التسجيل العام غير متاح. يجب أن تتم إضافة المستخدم من قبل مسؤول المؤسسة." };
-  }
-
-  const { requireOrganizationContext } = await import("@/lib/authorization/organization");
-  const context = await requireOrganizationContext();
-  if (context.role !== "SUPER_ADMIN") {
-    return { error: "ليس لديك صلاحية إنشاء المستخدمين." };
-  }
-
-  const validatedFields = registerSchema.safeParse({
+/**
+ * Credentials are verified in exactly one place: the Auth.js `authorize` callback, which applies the
+ * persistent rate limit, records audit events and compares the password hash. This action must not
+ * look users up or compare passwords itself, otherwise those checks could be bypassed.
+ */
+export async function login(formData: FormData): Promise<LoginState> {
+  const parsed = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
-    name: formData.get("name"),
   });
+  if (!parsed.success) return { error: "invalid_input" };
 
-  if (!validatedFields.success) return { error: "تحقق من البيانات." };
-
-  const { email, password, name } = validatedFields.data;
-  const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  if (existingUser) return { error: "هذا البريد الإلكتروني مستخدم بالفعل." };
-
-  const hashedPassword = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({ data: { email, name, password: hashedPassword } });
-
-  await prisma.organizationMember.create({
-    data: { organizationId: context.organizationId, userId: user.id, role: "STAFF" },
-  });
-
-  return { success: "تم إنشاء المستخدم بنجاح." };
-}
-
-const loginSchema = z.object({
-  email: z.string().email('?????? ?????????? ??? ????'),
-  password: z.string().min(8, '???? ?????? ??? ?? ???? 8 ???? ??? ?????'),
-});
-
-export async function login(formData: FormData) {
   try {
-    const validatedFields = loginSchema.safeParse({
-      email: formData.get('email'),
-      password: formData.get('password'),
-    });
-
-    if (!validatedFields.success) {
-      return { error: '?????? ??? ?????' };
-    }
-
-    const { email, password } = validatedFields.data;
-
-    // ????? ?? ????????
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return { error: '?????? ?????????? ?? ???? ?????? ??? ?????' };
-    }
-
-    // ?????? ?? ???? ??????
-    const passwordMatch = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatch) {
-      return { error: '?????? ?????????? ?? ???? ?????? ??? ?????' };
-    }
-
-    // ????? ?????? ???????? NextAuth
-    await signIn('credentials', {
-      email,
-      password,
+    const result: unknown = await signIn("credentials", {
+      email: parsed.data.email,
+      password: parsed.data.password,
       redirect: false,
     });
-
-    return { success: '?? ????? ?????? ?????' };
+    // Depending on the Auth.js version a failed sign-in either throws or resolves to an error URL.
+    if (typeof result === "string" && /[?&]error=/.test(result)) return { error: "invalid_credentials" };
   } catch (error) {
-    return { error: '??? ??? ????? ????? ??????' };
+    if (error instanceof AuthError) return { error: "invalid_credentials" };
+    logger.error("login_failed_unexpectedly", serializeError(error));
+    return { error: "unexpected" };
   }
+
+  redirect("/dashboard");
 }

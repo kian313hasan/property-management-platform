@@ -41,3 +41,43 @@ Decision: add a mandatory organizationId to Property, Unit, Tenant, Lease, Payme
 Migration strategy: existing single-tenant records are assigned to a deterministic default organization during the migration, and existing users receive membership in that organization.
 Reason: preserves existing data while establishing an explicit tenant boundary without introducing database-per-tenant operational complexity.
 Consequences: all future data access must derive organization context from authenticated membership; client-supplied organization IDs are not trusted. Cross-tenant integration tests remain a required gate.
+
+## ADR-007: Permission matrix in code, Permission tables not authoritative
+Context: RBAC needs one reviewable source of truth; the schema also has Permission/RolePermission tables.
+Decision: `lib/authorization/permissions.ts` is the source of truth. A unit test keeps the Prisma `PermissionKey` and `Role` enums in sync with it. The tables are not read at runtime.
+Alternatives: database-driven, per-organization custom roles.
+Reason: a typed constant is simple, testable and cannot be altered by data changes; custom roles are not a current requirement.
+Consequences: per-organization custom roles would require a new ADR and migrating the check to read the tables.
+
+## ADR-008: Login and password-reset rate limiting in PostgreSQL
+Context: credentials authentication needs brute-force protection without adding Redis.
+Decision: a `LoginRateLimit` table keyed by normalized email and, when available, client IP.
+Alternatives: in-memory limiter (breaks with several instances); Redis; edge/WAF only.
+Reason: works across instances with the existing database.
+Consequences: extra DB writes per attempt; `x-forwarded-for` is only trustworthy behind a proxy that overwrites it. Rate limiting for uploads and expensive endpoints is still to be built.
+
+## ADR-009: Auth.js with JWT sessions
+Context: the Credentials provider cannot use database sessions in Auth.js.
+Decision: JWT session strategy; authorization re-reads the membership role from the database on every request (`requireOrganizationContext`).
+Alternatives: database sessions; custom session store.
+Reason: avoids trusting a role cached in the token. Consequence: `Session` table is unused, and JWTs cannot be revoked server-side before expiry (accepted risk, see docs/STATUS.md).
+
+## ADR-010: Locale formatting: Western digits and Gregorian calendar everywhere
+Context: Arabic and Persian users differ in expected digits and calendar.
+Decision (confirmed by the product owner, 2026-10-13): all locales use Western digits (0-9) and the Gregorian calendar, forced through the `-u-ca-gregory-nu-latn` Intl extension. Locale comes from cookie, then Accept-Language, then `en`. No locale in the URL.
+Alternatives: Persian digits and Jalali calendar for fa; Arabic-Indic digits for ar; next-intl with locale routing.
+Reason: consistent figures across locales for the university delivery; minimal dependencies (ADR-005).
+Consequences: a Jalali/Persian-digit option would need a new ADR; locale-prefixed URLs likewise.
+
+## ADR-011: Custom UI primitives instead of the shadcn/ui CLI
+Context: the brief names shadcn/ui and React Hook Form.
+Decision: `components/ui/*` are hand-written primitives (cva + tailwind-merge) in the shadcn style. Forms use `useActionState`. React Hook Form was removed from dependencies on 2026-10-13 because it was unused (confirmed by the product owner); it can be re-added with a reason if complex client-side forms appear.
+Reason: no generated code was pulled in during the foundation phase.
+Consequences: hand-written primitives are maintained in-repo.
+
+## ADR-012: Fully local operation (no external services)
+Context: the project is delivered for university review and must run 100% locally.
+Decision (confirmed 2026-10-13): no external email or storage provider is integrated. Password-reset links are printed to the server console outside production (`lib/mail/local-mailer.ts`); in production nothing is printed and a warning records the missing provider. If file storage is needed it will use a private local directory behind the same adapter boundary, with allowlists, size limits and generated keys (not yet implemented).
+Alternatives: SMTP/SaaS email; S3-compatible storage.
+Reason: no accounts, keys or network are required to demo the project.
+Consequences: password reset is a development-only flow; a real provider needs a new ADR. `STORAGE_*`, `EMAIL_*` and `SENTRY_DSN` env variables stay optional and unused.

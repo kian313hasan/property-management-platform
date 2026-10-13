@@ -1,31 +1,32 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { consumePasswordReset, requestPasswordReset } from "@/lib/security/password-reset";
-
-const requestSchema = z.object({ email: z.string().email() });
-const resetSchema = z.object({
-  token: z.string().min(1),
-  password: z.string().min(8).max(128),
-  confirmPassword: z.string().min(8).max(128),
-}).refine((data) => data.password === data.confirmPassword, {
-  path: ["confirmPassword"],
-});
+import { checkPasswordResetRateLimit } from "@/lib/security/login-rate-limit";
+import { deliverPasswordResetLink } from "@/lib/mail/local-mailer";
+import { getClientIp } from "@/lib/security/client-ip";
+import { passwordResetCompletionSchema, passwordResetRequestSchema } from "@/lib/validation/auth";
 
 export async function requestPasswordResetAction(formData: FormData) {
-  const parsed = requestSchema.safeParse({ email: formData.get("email") });
+  const parsed = passwordResetRequestSchema.safeParse({ email: formData.get("email") });
   if (parsed.success) {
-    await requestPasswordReset(parsed.data.email);
+    const ip = getClientIp(await headers());
+    // When rate limited the request is silently dropped: the response below is identical in every
+    // case, so neither account existence nor the limiter state can be probed.
+    const limited = await checkPasswordResetRateLimit(parsed.data.email, ip);
+    if (!limited) {
+      const token = await requestPasswordReset(parsed.data.email);
+      if (token) await deliverPasswordResetLink(parsed.data.email, token);
+    }
   }
 
-  // Keep the response generic to avoid account enumeration.
   redirect("/forgot-password?requested=1");
 }
 
 export async function completePasswordResetAction(formData: FormData) {
   const token = formData.get("token");
-  const parsed = resetSchema.safeParse({
+  const parsed = passwordResetCompletionSchema.safeParse({
     token,
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
