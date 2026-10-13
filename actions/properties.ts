@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/authorization/organization";
+import { hasPermission } from "@/lib/authorization/permissions";
 
 const propertySchema = z.object({
   name: z.string().trim().min(2, "اسم العقار مطلوب"),
@@ -14,11 +15,9 @@ const propertySchema = z.object({
   type: z.enum(["RESIDENTIAL", "COMMERCIAL", "MIXED", "OTHER"]),
 });
 
-const canManageProperties = new Set(["SUPER_ADMIN", "PROPERTY_MANAGER"]);
-
 export async function createProperty(formData: FormData) {
   const context = await requireOrganizationContext();
-  if (!canManageProperties.has(context.role)) return { error: "ليس لديك صلاحية إضافة عقار." };
+  if (!hasPermission(context.role, "properties:manage")) return { error: "ليس لديك صلاحية إضافة عقار." };
 
   const parsed = propertySchema.safeParse({
     name: formData.get("name"),
