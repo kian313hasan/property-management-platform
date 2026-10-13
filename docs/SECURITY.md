@@ -34,3 +34,28 @@ Deny by default. Fail closed on missing authentication, organization context, or
 - Login rate limiting is implemented and covered by integration tests.
 - Password reset token issuance/consumption is implemented with hashed, single-use, expiring tokens and non-enumerating request behavior. Email delivery is intentionally not bundled because no mail provider is configured.
 - MFA/passkeys, file scanning/storage controls, and a nonce-based strict CSP remain explicit security gates before production security sign-off. The current CSP is a hardened baseline, not a claim of a fully strict nonce policy.
+
+## Testable checklist
+Status values: **Covered** = an automated test exists in the repo; **Partial** = implemented, only partly tested; **Open** = not implemented or not tested. "Covered" means the test was written, not that it has been run in every environment; CI is authoritative.
+
+| # | Control | Evidence | Status |
+|---|---------|----------|--------|
+| 1 | Env validation fails safely, never echoes values | tests/unit/env.test.ts | Covered |
+| 2 | Role/permission matrix, deny by default, enums in sync with Prisma | tests/unit/permissions.test.ts, authorization.test.ts | Covered |
+| 3 | Cross-tenant relation rejected by the database | tests/integration/tenant-isolation.integration.test.ts | Covered (needs PostgreSQL) |
+| 4 | Login and password-reset rate limit, single-use hashed reset token | tests/integration/... | Covered (needs PostgreSQL) |
+| 5 | Input validation (email, password, money, dates, locale) | tests/unit/validation.test.ts | Covered |
+| 6 | Errors never leak SQL, paths, stack traces | tests/unit/errors.test.ts | Covered |
+| 7 | Logger redacts secrets; error messages hidden in production | tests/unit/logger.test.ts | Covered |
+| 8 | Every server action authenticates, derives organization, checks role + ownership | Code review only | Partial: no per-action tests (IDOR tests missing) |
+| 9 | Unauthenticated access to protected routes redirects to /login | proxy.ts | Partial: no E2E test |
+| 10 | Security headers present (CSP, X-Frame-Options, nosniff, HSTS in prod) | next.config.ts | Partial: no test; CSP allows `unsafe-inline` |
+| 11 | CSRF | Next.js server actions compare Origin/Host; no custom route handlers mutate state | Partial: not tested |
+| 12 | Audit log append-only | Convention only | Open |
+| 13 | Audit events for sensitive resource changes | `auditResourceChange` exists; only auth, role and reset events call the audit service | Open |
+| 14 | Secure file upload, storage and malware scanning | Not implemented | Open |
+| 15 | SSRF protection | No outbound fetch from user input exists yet; a rule is required before adding one | Open (n/a today) |
+| 16 | MFA / passkeys, JWT revocation | Not implemented | Open |
+| 17 | Dependency scanning | `npm audit` in CI, CodeQL, dependency-review, Dependabot | Partial: never observed running here |
+
+Nothing in this repository is a claim that the application is secure; the Open and Partial rows are the remaining work.

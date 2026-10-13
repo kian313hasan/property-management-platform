@@ -5,9 +5,18 @@ on:
   push:
     branches: [main]
 
+# Least privilege: the workflow only needs to read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -47,6 +56,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: quality
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/property_management?schema=public

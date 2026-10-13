@@ -1,1 +1,58 @@
-export const fa = { common: { loading: "در حال بارگذاری", error: "خطای غیرمنتظره رخ داد", unauthorized: "ورود لازم است", forbidden: "شما اجازه انجام این کار را ندارید" } } as const;
+import type { Messages } from "./en";
+
+export const fa: Messages = {
+  common: {
+    appName: "پلتفرم مدیریت املاک",
+    loading: "در حال بارگذاری",
+    error: "خطای غیرمنتظره‌ای رخ داد",
+    unauthorized: "ورود به حساب لازم است",
+    forbidden: "شما دسترسی لازم را ندارید",
+    retry: "تلاش دوباره",
+    save: "ذخیره",
+    cancel: "انصراف",
+    language: "زبان",
+  },
+  nav: {
+    dashboard: "داشبورد",
+    properties: "املاک",
+    tenants: "مستاجران",
+    leases: "قراردادها",
+    payments: "پرداخت‌ها",
+    expenses: "هزینه‌ها",
+    maintenance: "نگهداری و تعمیرات",
+    users: "کاربران",
+    signOut: "خروج",
+  },
+  auth: {
+    loginTitle: "ورود",
+    loginSubtitle: "پلتفرم مدیریت املاک",
+    email: "ایمیل",
+    password: "گذرواژه",
+    emailPlaceholder: "name@example.com",
+    signIn: "ورود",
+    signingIn: "در حال ورود…",
+    forgotPassword: "گذرواژه را فراموش کرده‌اید؟",
+    registrationClosed: "ثبت‌نام عمومی در دسترس نیست. برای ایجاد حساب با مدیر سازمان خود تماس بگیرید.",
+    passwordResetSuccess: "گذرواژه تغییر کرد. با گذرواژه جدید وارد شوید.",
+    errors: {
+      invalid_input: "اطلاعات واردشده را بررسی کنید.",
+      invalid_credentials: "ایمیل یا گذرواژه نادرست است.",
+      unexpected: "هنگام ورود مشکلی پیش آمد. دوباره تلاش کنید.",
+    },
+  },
+  errors: {
+    UNAUTHORIZED: "برای ادامه وارد شوید.",
+    FORBIDDEN: "شما اجازه انجام این کار را ندارید.",
+    NOT_FOUND: "مورد درخواستی پیدا نشد.",
+    VALIDATION_ERROR: "برخی از داده‌ها معتبر نیستند.",
+    CONFLICT: "این مورد با داده‌های موجود تداخل دارد.",
+    RATE_LIMITED: "تعداد تلاش‌ها زیاد است. کمی صبر کنید و دوباره تلاش کنید.",
+    INTERNAL_ERROR: "خطای غیرمنتظره‌ای رخ داد.",
+  },
+  states: {
+    emptyTitle: "هنوز چیزی اینجا نیست",
+    emptyHint: "مواردی که اضافه می‌کنید اینجا نمایش داده می‌شوند.",
+    errorTitle: "مشکلی پیش آمد",
+    errorHint: "دوباره تلاش کنید. اگر مشکل ادامه داشت با مدیر خود تماس بگیرید.",
+  },
+};

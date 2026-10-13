@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { logger } from "@/lib/logging/logger";
+import { logger, serializeError } from "@/lib/logging/logger";
 import type { AuditEvent } from "./types";
 
 export async function recordAuditEvent(event: AuditEvent): Promise<void> {
@@ -16,10 +16,11 @@ export async function recordAuditEvent(event: AuditEvent): Promise<void> {
       },
     });
   } catch (error) {
+    // Best effort by design: a failed audit write must not break the user action, but it is logged.
     logger.error("audit_write_failed", {
       action: event.action,
       requestId: event.requestId,
-      error: error instanceof Error ? error.message : "unknown",
+      ...serializeError(error),
     });
   }
 }

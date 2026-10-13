@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { recordAuditEvent } from "@/lib/audit/service";
 import authConfig from "@/lib/auth.config";
 import { checkLoginRateLimit, clearLoginRateLimit } from "@/lib/security/login-rate-limit";
+import { getClientIp } from "@/lib/security/client-ip";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -22,8 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const requestId = randomUUID();
         const email = typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
         const password = typeof credentials?.password === "string" ? credentials.password : "";
-        const forwardedFor = request.headers.get("x-forwarded-for");
-        const ip = forwardedFor?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || undefined;
+        const ip = getClientIp(request.headers);
 
         if (!email || !password) {
           await recordAuditEvent({ action: "LOGIN_FAILED", actorUserId: null, organizationId: null, resourceType: "AUTH", resourceId: null, requestId, metadata: { reason: "missing_credentials" } });

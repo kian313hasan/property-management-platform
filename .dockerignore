@@ -1,0 +1,22 @@
+# Never send secrets, VCS history or local build output into the image build context.
+.git
+.github
+.env
+.env.*
+!.env.example
+node_modules
+.next
+out
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
+*.pem
+npm-debug.log*
+.DS_Store
+.claude
+.cursor
+.devin
+.agents
+docs
+tests

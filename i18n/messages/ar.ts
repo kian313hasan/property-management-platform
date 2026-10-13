@@ -1,1 +1,58 @@
-export const ar = { common: { loading: "جارٍ التحميل", error: "حدث خطأ غير متوقع", unauthorized: "يجب تسجيل الدخول", forbidden: "ليس لديك صلاحية" } } as const;
+import type { Messages } from "./en";
+
+export const ar: Messages = {
+  common: {
+    appName: "منصة إدارة العقارات",
+    loading: "جارٍ التحميل",
+    error: "حدث خطأ غير متوقع",
+    unauthorized: "يلزم تسجيل الدخول",
+    forbidden: "ليست لديك صلاحية",
+    retry: "إعادة المحاولة",
+    save: "حفظ",
+    cancel: "إلغاء",
+    language: "اللغة",
+  },
+  nav: {
+    dashboard: "لوحة التحكم",
+    properties: "العقارات",
+    tenants: "المستأجرون",
+    leases: "العقود",
+    payments: "الدفعات",
+    expenses: "المصروفات",
+    maintenance: "الصيانة",
+    users: "المستخدمون",
+    signOut: "تسجيل الخروج",
+  },
+  auth: {
+    loginTitle: "تسجيل الدخول",
+    loginSubtitle: "منصة إدارة العقارات",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    emailPlaceholder: "name@example.com",
+    signIn: "دخول",
+    signingIn: "جارٍ الدخول…",
+    forgotPassword: "نسيت كلمة المرور؟",
+    registrationClosed: "التسجيل العام غير متاح. تواصل مع مسؤول المؤسسة لإنشاء حسابك.",
+    passwordResetSuccess: "تم تغيير كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.",
+    errors: {
+      invalid_input: "تحقق من البيانات المدخلة.",
+      invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      unexpected: "حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.",
+    },
+  },
+  errors: {
+    UNAUTHORIZED: "يرجى تسجيل الدخول للمتابعة.",
+    FORBIDDEN: "ليست لديك صلاحية للقيام بذلك.",
+    NOT_FOUND: "تعذّر العثور على المطلوب.",
+    VALIDATION_ERROR: "بعض البيانات غير صالحة.",
+    CONFLICT: "يتعارض هذا مع بيانات موجودة.",
+    RATE_LIMITED: "محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة.",
+    INTERNAL_ERROR: "حدث خطأ غير متوقع.",
+  },
+  states: {
+    emptyTitle: "لا يوجد شيء هنا بعد",
+    emptyHint: "ستظهر هنا العناصر التي تضيفها.",
+    errorTitle: "حدث خطأ ما",
+    errorHint: "حاول مرة أخرى. إذا استمرت المشكلة فتواصل مع المسؤول.",
+  },
+};
