@@ -1,50 +1,109 @@
-import Link from "next/link";
-import { auth, signOut } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
-import { requireOrganizationContext } from "@/lib/authorization/organization";
+import { Prisma } from "@prisma/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AppShell } from "@/components/layout/app-shell";
+import { formatAmount, formatNumber } from "@/i18n/format";
+import { getI18n } from "@/i18n/server";
 import { switchOrganization } from "@/actions/organization";
+import { Select } from "@/components/ui/select";
+import { hasPermission } from "@/lib/authorization/permissions";
+import { requirePageAccess } from "@/lib/authorization/page";
+import { expenseScope, leaseScope, paymentScope, propertyScope, tenantScope } from "@/lib/authorization/scope";
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-  const context = await requireOrganizationContext();
-  const isManager = context.role === "PROPERTY_MANAGER";
-  const canFinance = ["SUPER_ADMIN","PROPERTY_MANAGER","ACCOUNTANT"].includes(context.role);
-  const canMaintenance = ["SUPER_ADMIN","PROPERTY_MANAGER","MAINTENANCE_MANAGER","STAFF"].includes(context.role);
-  const propertyWhere = isManager ? { organizationId: context.organizationId, managerId: session.user.id } : { organizationId: context.organizationId };
-  const paymentWhere = isManager ? { organizationId: context.organizationId, status: "PAID" as const, lease: { unit: { property: { managerId: session.user.id } } } } : { organizationId: context.organizationId, status: "PAID" as const };
-  const expenseWhere = isManager ? { organizationId: context.organizationId, property: { managerId: session.user.id } } : { organizationId: context.organizationId };
-  const leaseWhere = isManager ? { organizationId: context.organizationId, status: "ACTIVE" as const, unit: { property: { managerId: session.user.id } } } : { organizationId: context.organizationId, status: "ACTIVE" as const };
+  const context = await requirePageAccess();
+  const { locale, t } = await getI18n();
+  const showCore = hasPermission(context.role, "properties:manage");
+  const showFinance = hasPermission(context.role, "finance:manage");
+
+  const paid = { ...paymentScope(context), status: "PAID" as const };
   const [propertyCount, tenantCount, activeLeaseCount, paidPaymentCount, revenue, expenses] = await Promise.all([
-    prisma.property.count({ where: propertyWhere }),
-    prisma.tenant.count({ where: isManager ? { organizationId: context.organizationId, OR: [{ leases: { none: { organizationId: context.organizationId } } }, { leases: { some: { organizationId: context.organizationId, unit: { property: { managerId: context.userId } } } } }] } : { organizationId: context.organizationId } }),
-    prisma.lease.count({ where: leaseWhere }),
-    prisma.payment.count({ where: paymentWhere }),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: paymentWhere }),
-    prisma.expense.aggregate({ _sum: { amount: true }, where: expenseWhere }),
+    prisma.property.count({ where: propertyScope(context) }),
+    prisma.tenant.count({ where: tenantScope(context) }),
+    prisma.lease.count({ where: { ...leaseScope(context), status: "ACTIVE" } }),
+    prisma.payment.count({ where: paid }),
+    prisma.payment.aggregate({ _sum: { amount: true }, where: paid }),
+    prisma.expense.aggregate({ _sum: { amount: true }, where: expenseScope(context) }),
   ]);
-  const totalRevenue = revenue._sum.amount?.toNumber() ?? 0;
-  const totalExpenses = expenses._sum.amount?.toNumber() ?? 0;
-  const netIncome = totalRevenue - totalExpenses;
-  const stats = (isManager || context.role === "SUPER_ADMIN") ? [["العقارات", propertyCount], ["المستأجرون", tenantCount], ["العقود النشطة", activeLeaseCount], ["الدفعات المدفوعة", paidPaymentCount]] : canFinance ? [["الدفعات المدفوعة", paidPaymentCount]] : [];
-  return <main className="min-h-screen bg-slate-50" dir="rtl">
-    <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4"><div><p className="text-xs font-semibold text-slate-400">PROPERTY MANAGEMENT PLATFORM</p><h1 className="text-xl font-bold">لوحة التحكم</h1></div><form action={async()=>{ "use server"; await signOut({redirectTo:"/login"});}}><button className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold">تسجيل الخروج</button></form></div></header>
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <section className="mb-8 rounded-3xl bg-slate-900 p-7 text-white"><div className="mb-4 flex flex-wrap items-center gap-3">
-      <span className="text-sm text-slate-300">المؤسسة: {context.organization.name}</span>
-      {context.memberships.length > 1 && (
-        <form action={async (formData: FormData) => { "use server"; await switchOrganization(formData); }} className="flex items-center gap-2">
-          <select name="organizationId" defaultValue={context.organizationId} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white">
-            {context.memberships.map((membership) => (
-              <option key={membership.organizationId} value={membership.organizationId}>{membership.organization.name}</option>
-            ))}
-          </select>
-          <button type="submit" className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-900">تبديل</button>
-        </form>
+
+  // Decimal arithmetic: sums and the net figure never pass through floating point.
+  const totalRevenue = revenue._sum.amount ?? new Prisma.Decimal(0);
+  const totalExpenses = expenses._sum.amount ?? new Prisma.Decimal(0);
+  const netIncome = totalRevenue.minus(totalExpenses);
+
+  const stats: { label: string; value: string }[] = [];
+  if (showCore) {
+    stats.push(
+      { label: t("dashboard.properties"), value: formatNumber(locale, propertyCount) },
+      { label: t("dashboard.tenants"), value: formatNumber(locale, tenantCount) },
+      { label: t("dashboard.activeLeases"), value: formatNumber(locale, activeLeaseCount) },
+    );
+  }
+  if (showCore || showFinance) stats.push({ label: t("dashboard.paidPayments"), value: formatNumber(locale, paidPaymentCount) });
+
+  const displayName = context.user.name || context.user.email || "";
+
+  return (
+    <AppShell role={context.role} active="/dashboard" title={t("dashboard.title")}>
+      <section className="mb-8 rounded-3xl bg-primary p-7 text-primary-fg">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span className="text-sm opacity-80">{t("dashboard.organization", { name: context.organization.name })}</span>
+          {context.memberships.length > 1 && (
+            <form
+              action={async (formData: FormData) => {
+                "use server";
+                await switchOrganization(formData);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Select name="organizationId" defaultValue={context.organizationId} aria-label={t("dashboard.switch")} className="h-9 w-auto text-fg">
+                {context.memberships.map((membership) => (
+                  <option key={membership.organizationId} value={membership.organizationId}>
+                    {membership.organization.name}
+                  </option>
+                ))}
+              </Select>
+              <Button type="submit" variant="outline" size="sm">
+                {t("dashboard.switch")}
+              </Button>
+            </form>
+          )}
+        </div>
+        <p className="text-sm opacity-80">{t("dashboard.welcome", { name: displayName })}</p>
+        <h2 className="mt-2 text-3xl font-bold">{t("dashboard.headline")}</h2>
+        <p className="mt-3 text-sm opacity-80">{t("dashboard.subline")}</p>
+      </section>
+
+      {stats.length > 0 && (
+        <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <Card key={stat.label}>
+              <CardContent>
+                <p className="text-sm text-fg-muted">{stat.label}</p>
+                <p className="mt-3 text-3xl font-bold">{stat.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
       )}
-    </div><p className="text-sm text-slate-300">مرحباً، {session.user.name || session.user.email}</p><h2 className="mt-2 text-3xl font-bold">إدارة عقاراتك من مكان واحد.</h2><p className="mt-3 text-sm text-slate-300">نظرة موحدة على العقارات والعقود والتحصيل والمصروفات.</p><div className="mt-5 flex flex-wrap gap-3">{["SUPER_ADMIN","PROPERTY_MANAGER"].includes(context.role)&&<Link href="/properties" className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900">العقارات</Link>}{["SUPER_ADMIN","PROPERTY_MANAGER"].includes(context.role)&&<Link href="/tenants" className="rounded-xl border border-slate-600 px-5 py-3 text-sm font-bold text-white">المستأجرون</Link>}{["SUPER_ADMIN","PROPERTY_MANAGER"].includes(context.role)&&<Link href="/leases" className="rounded-xl border border-slate-600 px-5 py-3 text-sm font-bold text-white">العقود</Link>}{canFinance&&<><Link href="/payments" className="rounded-xl border border-slate-600 px-5 py-3 text-sm font-bold text-white">الدفعات</Link><Link href="/expenses" className="rounded-xl border border-slate-600 px-5 py-3 text-sm font-bold text-white">المصروفات</Link></>}{canMaintenance&&<Link href="/maintenance" className="rounded-xl border border-slate-600 px-5 py-3 text-sm font-bold text-white">الصيانة</Link>}</div></section>
-      <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{stats.map(([label,value])=><article key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{label}</p><p className="mt-3 text-3xl font-bold">{value}</p></article>)}</section>
-      {canFinance && <section className="mt-6 grid gap-5 md:grid-cols-3"><article className="rounded-2xl border bg-white p-6"><p className="text-sm text-slate-500">الإيرادات المحصلة</p><p className="mt-2 text-2xl font-bold">{totalRevenue.toLocaleString()}</p></article><article className="rounded-2xl border bg-white p-6"><p className="text-sm text-slate-500">المصروفات</p><p className="mt-2 text-2xl font-bold">{totalExpenses.toLocaleString()}</p></article><article className="rounded-2xl border bg-white p-6"><p className="text-sm text-slate-500">صافي الدخل</p><p className="mt-2 text-2xl font-bold">{netIncome.toLocaleString()}</p></article></section>}
-    </div></main>;
+
+      {showFinance && (
+        <section className="mt-6 grid gap-5 md:grid-cols-3">
+          {[
+            { label: t("dashboard.revenue"), value: totalRevenue },
+            { label: t("dashboard.expenses"), value: totalExpenses },
+            { label: t("dashboard.netIncome"), value: netIncome },
+          ].map((item) => (
+            <Card key={item.label}>
+              <CardContent className="p-6">
+                <p className="text-sm text-fg-muted">{item.label}</p>
+                <p className="mt-2 text-2xl font-bold">{formatAmount(locale, item.value)}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
+    </AppShell>
+  );
 }

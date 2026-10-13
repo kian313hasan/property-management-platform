@@ -1,2 +1,37 @@
-import Link from "next/link"; import {auth} from "@/lib/auth"; import {redirect} from "next/navigation"; import {requireOrganizationContext} from "@/lib/authorization/organization"; import NewTenantForm from "./new-tenant-form";
-export default async function NewTenantPage(){const s=await auth();if(!s)redirect("/login");const context=await requireOrganizationContext();if(!["SUPER_ADMIN","PROPERTY_MANAGER"].includes(context.role))redirect("/tenants");return <main className="min-h-screen bg-slate-50" dir="rtl"><div className="mx-auto max-w-2xl px-6 py-10"><Link href="/tenants" className="text-sm font-semibold text-slate-500">← العودة للمستأجرين</Link><div className="mt-5 rounded-3xl border bg-white p-7 shadow-sm"><h1 className="text-2xl font-bold">إضافة مستأجر</h1><p className="mt-2 text-sm text-slate-500">أدخل البيانات الأساسية للمستأجر.</p><NewTenantForm/></div></div></main>}
+import { createTenant } from "@/actions/tenants";
+import { ActionForm } from "@/components/forms/action-form";
+import { FormPage } from "@/components/layout/form-page";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+
+export default async function NewTenantPage() {
+  await requirePageAccess("properties:manage", "/tenants");
+  const { t } = await getI18n();
+
+  return (
+    <FormPage backHref="/tenants" backLabel={t("tenants.backToList")} title={t("tenants.addTitle")} hint={t("tenants.addHint")}>
+      <ActionForm action={createTenant} submitLabel={t("tenants.submit")}>
+        <Field htmlFor="name" label={t("tenants.fullName")}>
+          <Input id="name" name="name" required />
+        </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field htmlFor="email" label={t("tenants.email")}>
+            <Input id="email" name="email" type="email" placeholder={t("auth.emailPlaceholder")} dir="ltr" />
+          </Field>
+          <Field htmlFor="phone" label={t("tenants.phone")}>
+            <Input id="phone" name="phone" type="tel" dir="ltr" />
+          </Field>
+        </div>
+        <Field htmlFor="nationalId" label={t("tenants.nationalId")}>
+          <Input id="nationalId" name="nationalId" dir="ltr" />
+        </Field>
+        <Field htmlFor="address" label={t("tenants.address")}>
+          <Textarea id="address" name="address" rows={3} />
+        </Field>
+      </ActionForm>
+    </FormPage>
+  );
+}

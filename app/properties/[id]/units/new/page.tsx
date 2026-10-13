@@ -1,2 +1,47 @@
-import Link from "next/link"; import {auth} from "@/lib/auth"; import {prisma} from "@/lib/prisma"; import {redirect,notFound} from "next/navigation"; import {requireOrganizationContext} from "@/lib/authorization/organization"; import NewUnitForm from "./new-unit-form";
-export default async function NewUnit({params}:{params:Promise<{id:string}>}){const s=await auth();if(!s)redirect("/login");const context=await requireOrganizationContext();if(context.role!=="SUPER_ADMIN"&&context.role!=="PROPERTY_MANAGER")redirect("/properties");const{id}=await params;const p=await prisma.property.findFirst({where:{id,organizationId:context.organizationId},select:{id:true,name:true,managerId:true}});if(!p)notFound();if(context.role==="PROPERTY_MANAGER"&&p.managerId!==context.userId)redirect("/properties");return <main className="min-h-screen bg-slate-50" dir="rtl"><div className="mx-auto max-w-2xl px-6 py-10"><Link href={"/properties/"+id} className="text-sm font-semibold text-slate-500">← العودة للعقار</Link><div className="mt-5 rounded-3xl border bg-white p-7 shadow-sm"><h1 className="text-2xl font-bold">إضافة وحدة</h1><p className="mt-2 text-sm text-slate-500">{p.name}</p><NewUnitForm propertyId={id}/></div></div></main>}
+import { notFound } from "next/navigation";
+import { createUnit } from "@/actions/units";
+import { ActionForm } from "@/components/forms/action-form";
+import { FormPage } from "@/components/layout/form-page";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { getI18n } from "@/i18n/server";
+import { requirePageAccess } from "@/lib/authorization/page";
+import { propertyScope } from "@/lib/authorization/scope";
+import { prisma } from "@/lib/prisma";
+
+export default async function NewUnitPage({ params }: { params: Promise<{ id: string }> }) {
+  const context = await requirePageAccess("properties:manage", "/properties");
+  const { t } = await getI18n();
+  const { id } = await params;
+
+  const property = await prisma.property.findFirst({ where: { id, ...propertyScope(context) }, select: { id: true, name: true } });
+  if (!property) notFound();
+
+  return (
+    <FormPage backHref={`/properties/${property.id}`} backLabel={t("units.backToProperty")} title={t("units.addTitle")} hint={property.name}>
+      <ActionForm action={createUnit} submitLabel={t("units.submit")}>
+        <input type="hidden" name="propertyId" value={property.id} />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field htmlFor="unitNumber" label={t("units.number")}>
+            <Input id="unitNumber" name="unitNumber" required placeholder="101" dir="ltr" />
+          </Field>
+          <Field htmlFor="floor" label={t("units.floor")}>
+            <Input id="floor" name="floor" type="number" step="1" placeholder="1" dir="ltr" />
+          </Field>
+          <Field htmlFor="bedrooms" label={t("units.bedrooms")}>
+            <Input id="bedrooms" name="bedrooms" type="number" min="0" step="1" placeholder="2" dir="ltr" />
+          </Field>
+          <Field htmlFor="bathrooms" label={t("units.bathrooms")}>
+            <Input id="bathrooms" name="bathrooms" type="number" min="0" step="any" placeholder="1" dir="ltr" />
+          </Field>
+          <Field htmlFor="area" label={t("units.area")}>
+            <Input id="area" name="area" type="number" min="0" step="any" placeholder="120" dir="ltr" />
+          </Field>
+          <Field htmlFor="rentAmount" label={t("units.rent")}>
+            <Input id="rentAmount" name="rentAmount" type="text" inputMode="decimal" required placeholder="1500" dir="ltr" />
+          </Field>
+        </div>
+      </ActionForm>
+    </FormPage>
+  );
+}
