@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/authorization/organization";
+import { auditResourceChange } from "@/lib/audit/resource";
 import { hasPermission } from "@/lib/authorization/permissions";
 
 const propertySchema = z.object({
@@ -29,7 +30,7 @@ export async function createProperty(formData: FormData) {
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "تحقق من البيانات." };
 
-  await prisma.property.create({
+  const created = await prisma.property.create({
     data: {
       ...parsed.data,
       organizationId: context.organizationId,
@@ -37,7 +38,8 @@ export async function createProperty(formData: FormData) {
     },
   });
 
-  revalidatePath("/properties");
+  await auditResourceChange(context, "RESOURCE_CREATED", "Property", created.id);
+revalidatePath("/properties");
   revalidatePath("/dashboard");
   redirect("/properties");
 }

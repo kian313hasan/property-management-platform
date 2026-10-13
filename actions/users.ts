@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { requireOrganizationContext } from "@/lib/authorization/organization";
+import { auditResourceChange } from "@/lib/audit/resource";
 import { hasPermission } from "@/lib/authorization/permissions";
 import { randomUUID } from "node:crypto";
 import { recordAuditEvent } from "@/lib/audit/service";
@@ -29,12 +30,14 @@ export async function createUser(formData: FormData) {
   }
 
   const hashed = await bcrypt.hash(password, 12);
-  await prisma.$transaction(async (tx) => {
+  const createdUserId = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({ data: { name, email, password: hashed, role: role as (typeof roles)[number] } });
     await tx.organizationMember.create({
       data: { organizationId: context.organizationId, userId: user.id, role: role as (typeof roles)[number] },
     });
+    return user.id;
   });
+  await auditResourceChange(context, "RESOURCE_CREATED", "User", createdUserId, { role });
 
   revalidatePath("/admin/users");
   return { success: true };
