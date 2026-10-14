@@ -9,12 +9,12 @@ export const E2E_USERS = {
 } as const;
 
 /** The UI is driven in English so selectors can use the real translated labels. */
-export async function useEnglish(page: Page) {
+export async function setEnglishLocale(page: Page) {
   await page.context().addCookies([{ name: "locale", value: "en", url: "http://127.0.0.1:3000" }]);
 }
 
 export async function signIn(page: Page, email: string, password = E2E_PASSWORD) {
-  await useEnglish(page);
+  await setEnglishLocale(page);
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { messages } from "../../i18n";
-import { E2E_USERS, signIn, useEnglish } from "./fixtures";
+import { E2E_USERS, signIn, setEnglishLocale } from "./fixtures";
 
 const PROTECTED = ["/dashboard", "/properties", "/properties/new", "/tenants", "/leases", "/payments", "/expenses", "/maintenance", "/admin/users"];
 
@@ -24,7 +24,7 @@ test.describe("authentication boundary", () => {
   });
 
   test("public registration is closed", async ({ page }) => {
-    await useEnglish(page);
+    await setEnglishLocale(page);
     await page.goto("/register");
     await expect(page.getByText(messages.en.auth.registrationClosed)).toBeVisible();
   });
