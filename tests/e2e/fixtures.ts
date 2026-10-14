@@ -36,7 +36,7 @@ export async function open(page: Page, path: string) {
   try {
     await waitForHydration(page);
   } catch {
-    throw new Error(`${path} did not hydrate. Browser problems: ${problems.join(" | ").slice(0, 1500) || "none reported"}`);
+    throw new Error(`${path} did not hydrate. Browser problems: ${[...new Set(problems.map((problem) => problem.replace(/id=[^'" ]+/, "id=…")))].join(" | ").slice(0, 1500) || "none reported"}`);
   }
 }
 
