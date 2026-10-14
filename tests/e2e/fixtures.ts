@@ -13,9 +13,26 @@ export async function setEnglishLocale(page: Page) {
   await page.context().addCookies([{ name: "locale", value: "en", url: "http://127.0.0.1:3000" }]);
 }
 
+/**
+ * Forms submit through client-side actions, so clicking before React has hydrated the page does
+ * nothing. Waiting for React's internal marker on <main> makes the tests deterministic.
+ */
+export async function waitForHydration(page: Page) {
+  await page.waitForFunction(() => {
+    const root = document.querySelector("main") ?? document.body;
+    return Object.keys(root).some((key) => key.startsWith("__reactFiber") || key.startsWith("__reactProps"));
+  });
+}
+
+/** `goto` that also waits for hydration (use before filling in or submitting a form). */
+export async function open(page: Page, path: string) {
+  await page.goto(path);
+  await waitForHydration(page);
+}
+
 export async function signIn(page: Page, email: string, password = E2E_PASSWORD) {
   await setEnglishLocale(page);
-  await page.goto("/login");
+  await open(page, "/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
