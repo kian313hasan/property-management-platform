@@ -11,7 +11,8 @@ import { propertyScope } from "@/lib/authorization/scope";
 import { moneyField } from "@/lib/validation/common";
 import { validationErrorKey, type ActionState } from "./types";
 
-const emptyToUndefined = (value: unknown) => (typeof value === "string" && value.trim() === "" ? undefined : value);
+// A missing field (null) and a blank text input both mean "not provided".
+const emptyToUndefined = (value: unknown) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value);
 
 const expenseSchema = z.object({
   propertyId: z.string().min(1),

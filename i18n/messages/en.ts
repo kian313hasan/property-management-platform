@@ -13,6 +13,7 @@ export const en = {
     back: "Back",
     none: "—",
     appTagline: "Property management platform",
+    appDescription: "Professional multi-tenant property management platform.",
   },
   nav: {
     dashboard: "Dashboard",

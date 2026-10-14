@@ -9,7 +9,8 @@ import { requireOrganizationContext } from "@/lib/authorization/organization";
 import { hasPermission } from "@/lib/authorization/permissions";
 import { validationErrorKey, type ActionState } from "./types";
 
-const emptyToUndefined = (value: unknown) => (typeof value === "string" && value.trim() === "" ? undefined : value);
+// A missing field (null) and a blank text input both mean "not provided".
+const emptyToUndefined = (value: unknown) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value);
 
 const tenantSchema = z.object({
   name: z.string().trim().min(2, "actionErrors.nameRequired"),

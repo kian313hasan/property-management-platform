@@ -38,5 +38,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Everything under /_next (static files, images and the dev-server HMR WebSocket) must bypass the
+  // proxy: it protects pages, and intercepting the HMR upgrade request breaks `next dev`.
+  matcher: ["/((?!api|_next/|favicon.ico).*)"],
 };
