@@ -12,7 +12,8 @@ import { moneyField } from "@/lib/validation/common";
 import { validationErrorKey, type ActionState } from "./types";
 
 const dateField = z.iso.date({ error: "actionErrors.dateInvalid" });
-const emptyToUndefined = (value: unknown) => (typeof value === "string" && value.trim() === "" ? undefined : value);
+// A missing field (null) and a blank text input both mean "not provided".
+const emptyToUndefined = (value: unknown) => (value === null || (typeof value === "string" && value.trim() === "") ? undefined : value);
 
 const paymentSchema = z.object({
   leaseId: z.string().min(1),
