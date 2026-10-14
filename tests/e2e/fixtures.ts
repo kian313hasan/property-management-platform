@@ -1,0 +1,38 @@
+import { expect, type Page } from "@playwright/test";
+
+export const E2E_ORG_SLUG = "e2e-organization";
+export const E2E_PASSWORD = "E2e-password-123!";
+
+export const E2E_USERS = {
+  admin: { email: "e2e-admin@example.test", name: "E2E Admin", role: "SUPER_ADMIN" },
+  accountant: { email: "e2e-accountant@example.test", name: "E2E Accountant", role: "ACCOUNTANT" },
+} as const;
+
+/** The UI is driven in English so selectors can use the real translated labels. */
+export async function useEnglish(page: Page) {
+  await page.context().addCookies([{ name: "locale", value: "en", url: "http://127.0.0.1:3000" }]);
+}
+
+export async function signIn(page: Page, email: string, password = E2E_PASSWORD) {
+  await useEnglish(page);
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+}
+
+export async function signInAs(page: Page, user: keyof typeof E2E_USERS) {
+  await signIn(page, E2E_USERS[user].email);
+  await expect(page).toHaveURL(/\/dashboard$/);
+}
+
+/** Chooses the `<option>` whose text contains `text` (option labels are built from several fields). */
+export async function selectByText(page: Page, selector: string, text: string) {
+  const option = page.locator(`${selector} option`, { hasText: text }).first();
+  await expect(option).toHaveCount(1);
+  const value = await option.getAttribute("value");
+  if (value === null) throw new Error(`Option "${text}" has no value`);
+  await page.locator(selector).selectOption(value);
+}
+
+export const unique = (label: string) => `${label} ${Date.now().toString(36)}`;
