@@ -86,4 +86,17 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma migrate deploy
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      # The suite runs against the production build (standalone server), like the Docker image does.
+      - run: npm run build
+      - name: Prepare standalone server
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+      - name: E2E tests
+        run: npm run test:e2e
+        env:
+          E2E_SERVER_COMMAND: node .next/standalone/server.js
+          PORT: "3000"
+          HOSTNAME: 127.0.0.1
+          # Auth.js refuses unknown hosts in production unless told to trust the configured one.
+          AUTH_TRUST_HOST: "true"

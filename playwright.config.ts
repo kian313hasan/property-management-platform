@@ -14,6 +14,7 @@ export default defineConfig({
   // "github" turns failures into annotations that are readable from the checks API.
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
   use: { baseURL, trace: "retain-on-failure", navigationTimeout: 60_000, actionTimeout: 20_000 },
-  webServer: { command: "npm run dev", url: baseURL, reuseExistingServer: true, timeout: 180_000 },
+  // CI runs the production build (see .github/workflows/ci.yml); locally the dev server is the default.
+  webServer: { command: process.env.E2E_SERVER_COMMAND ?? "npm run dev", url: baseURL, reuseExistingServer: true, timeout: 180_000 },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext, ACTIVE_ORGANIZATION_COOKIE } from "@/lib/authorization/organization";
 import type { ActionState } from "./types";
+import { shouldUseSecureCookies } from "@/lib/security/cookies";
 
 const schema = z.object({ organizationId: z.string().min(1) });
 
@@ -23,7 +24,7 @@ export async function switchOrganization(formData: FormData): Promise<ActionStat
   const cookieStore = await cookies();
   cookieStore.set(ACTIVE_ORGANIZATION_COOKIE, membership.organizationId, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     sameSite: "lax",
     path: "/",
   });
