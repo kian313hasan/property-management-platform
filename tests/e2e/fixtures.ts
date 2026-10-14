@@ -26,8 +26,18 @@ export async function waitForHydration(page: Page) {
 
 /** `goto` that also waits for hydration (use before filling in or submitting a form). */
 export async function open(page: Page, path: string) {
+  const problems: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(`console: ${message.text()}`);
+  });
+  page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
+  page.on("requestfailed", (request) => problems.push(`requestfailed: ${request.url()} ${request.failure()?.errorText ?? ""}`));
   await page.goto(path);
-  await waitForHydration(page);
+  try {
+    await waitForHydration(page);
+  } catch {
+    throw new Error(`${path} did not hydrate. Browser problems: ${problems.join(" | ").slice(0, 1500) || "none reported"}`);
+  }
 }
 
 export async function signIn(page: Page, email: string, password = E2E_PASSWORD) {
