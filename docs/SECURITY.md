@@ -47,11 +47,11 @@ Status values: **Covered** = an automated test exists in the repo; **Partial** =
 | 5 | Input validation (email, password, money, dates, locale) | tests/unit/validation.test.ts | Covered |
 | 6 | Errors never leak SQL, paths, stack traces | tests/unit/errors.test.ts | Covered |
 | 7 | Logger redacts secrets; error messages hidden in production | tests/unit/logger.test.ts | Covered |
-| 8 | Every server action authenticates, derives organization, checks role + ownership | Code review only | Partial: no per-action tests (IDOR tests missing) |
-| 9 | Unauthenticated access to protected routes redirects to /login | proxy.ts | Partial: no E2E test |
-| 10 | Security headers present (CSP, X-Frame-Options, nosniff, HSTS in prod) | next.config.ts | Partial: no test; CSP allows `unsafe-inline` |
+| 8 | Every server action authenticates, derives organization, checks role + ownership | tests/integration/actions-roles.integration.test.ts (permission matrix per role, cross-organization and cross-manager isolation, staff self-assignment, role-change limits) | Covered for the create/role actions that exist (needs PostgreSQL) |
+| 9 | Unauthenticated access to protected routes redirects to /login; role-based navigation and access | tests/e2e/access.spec.ts, roles.spec.ts | Covered (E2E, production build) |
+| 10 | Security headers present (CSP, X-Frame-Options, nosniff) | tests/e2e/access.spec.ts | Partial: HSTS not asserted; CSP allows `unsafe-inline` |
 | 11 | CSRF | Next.js server actions compare Origin/Host; no custom route handlers mutate state | Partial: not tested |
-| 12 | Audit log append-only | Convention only | Open |
+| 12 | Audit log append-only | DB trigger (ADR-013); tests/integration/audit-log.integration.test.ts, tests/unit/audit-immutability.test.ts | Covered (needs PostgreSQL); a superuser can still drop the trigger |
 | 13 | Audit events for sensitive resource changes | `auditResourceChange` exists; only auth, role and reset events call the audit service | Open |
 | 14 | Secure file upload, storage and malware scanning | Not implemented | Open |
 | 15 | SSRF protection | No outbound fetch from user input exists yet; a rule is required before adding one | Open (n/a today) |

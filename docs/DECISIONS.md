@@ -81,3 +81,22 @@ Decision (confirmed 2026-10-13): no external email or storage provider is integr
 Alternatives: SMTP/SaaS email; S3-compatible storage.
 Reason: no accounts, keys or network are required to demo the project.
 Consequences: password reset is a development-only flow; a real provider needs a new ADR. `STORAGE_*`, `EMAIL_*` and `SENTRY_DSN` env variables stay optional and unused.
+
+## ADR-013: Append-only audit log enforced by a database trigger
+Context: audit entries must not be editable or deletable by application users, including through a bug or a compromised application connection.
+Decision: migration `20261014090000_protect_audit_log` adds a trigger on "AuditLog" that rejects DELETE, TRUNCATE and every UPDATE except the referential action of the existing `ON DELETE SET NULL` keys (a non-null organization/actor reference becoming NULL with all other columns unchanged).
+Alternatives: revoke UPDATE/DELETE from the application role (needs separate DB roles, not available in the local setup); application-level convention only (previous state); a separate immutable store.
+Reason: works with the single local database role and still lets organizations and users be deleted without losing their audit history.
+Consequences: audit rows can be orphaned (reference NULL) but never changed otherwise; a superuser or table owner can still drop the trigger, so production should also run the app with a role that lacks ALTER/TRIGGER on the table. Retention/archival of old audit rows now requires a deliberate migration.
+
+## ADR-014: E2E tests run against the production build in CI
+Context: under `next dev` in CI the HMR WebSocket handshake fails and pages did not hydrate reliably, so forms could not be driven.
+Decision: the CI `e2e` job builds the app and runs the standalone server; locally the default remains `npm run dev` (override with `E2E_SERVER_COMMAND`). The suite seeds its own organization and users (`tests/e2e/global-setup.ts`).
+Alternatives: keep the dev server with longer waits; use `next start`.
+Reason: deterministic, faster, and the same artifact shape as the Docker image.
+Consequences: dev-server behaviour is not covered by CI. Running a production build locally over HTTP needs `AUTH_TRUST_HOST=true` (Auth.js rejects unknown hosts otherwise).
+
+## ADR-015: Cookie `Secure` flag and CSP `upgrade-insecure-requests` follow the public URL
+Context: both used NODE_ENV, which breaks a production build served over plain HTTP for a local demo (browsers requested assets over HTTPS; Safari refuses Secure cookies on HTTP).
+Decision: both are enabled only when `NEXTAUTH_URL` starts with `https://` (`lib/security/cookies.ts`, `next.config.ts`). The CSP allows `unsafe-eval` only outside production (dev tooling).
+Consequences: any real deployment must set `NEXTAUTH_URL` to its https URL, otherwise these protections are off.
